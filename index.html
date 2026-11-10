@@ -1,0 +1,1776 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мурко і Архів часу</title>
+<style>
+@font-face{font-family:Nunito;font-weight:600;src:url(assets/fonts/nunito-cyrillic-600-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:600;src:url(assets/fonts/nunito-latin-600-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+2190-21FF,U+2212}
+@font-face{font-family:Nunito;font-weight:800;src:url(assets/fonts/nunito-cyrillic-800-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Nunito;font-weight:800;src:url(assets/fonts/nunito-latin-800-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+2190-21FF,U+2212}
+@font-face{font-family:Comfortaa;font-weight:700;src:url(assets/fonts/comfortaa-cyrillic-700-normal.woff2) format("woff2");unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}
+@font-face{font-family:Comfortaa;font-weight:700;src:url(assets/fonts/comfortaa-latin-700-normal.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F,U+2190-21FF,U+2212}
+
+:root{
+  --ink:#3b2412; --paper:#fff8ea; --paper2:#f6e8c8; --brass:#b8862f; --brass-d:#7a5320;
+  --teal:#4fe3d6; --teal-d:#138a86; --ok:#2f9e44; --bad:#d9480f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;background:#120c08;overflow:hidden}
+body{font-family:Nunito,"Trebuchet MS",sans-serif;font-weight:600;color:var(--ink);-webkit-user-select:none;user-select:none}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+#stage{position:fixed;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center;overflow:hidden;background:#000}
+.bg{position:absolute;inset:0;background-size:100% 100%;opacity:0;transition:opacity .9s ease}
+.bg.on{opacity:1}
+
+/* ---------- actors ---------- */
+#actors{position:absolute;inset:0;pointer-events:none}
+.actor{position:absolute;transform:translate(-50%,-100%);transition:left 1.4s cubic-bezier(.45,.05,.3,1),opacity .6s ease;pointer-events:none}
+.actor img{display:block;height:100%;filter:drop-shadow(0 14px 10px rgba(0,0,0,.28))}
+.actor.hidden{opacity:0}
+.actor.flip img{transform:scaleX(-1)}
+.actor.talk img{animation:talk .55s ease}
+.actor.flip.talk img{animation:talkf .55s ease}
+@keyframes talk{0%,100%{transform:translateY(0)}40%{transform:translateY(-14px)}}
+@keyframes talkf{0%,100%{transform:scaleX(-1) translateY(0)}40%{transform:scaleX(-1) translateY(-14px)}}
+.actor.roll img{animation:roll .35s ease-in-out infinite}
+@keyframes roll{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-6px) rotate(2deg)}}
+.actor.float img{animation:float 3.2s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.actor.clickable{pointer-events:auto;cursor:pointer}
+.actor.glow img{animation:glow 1.4s ease-in-out infinite}
+@keyframes glow{0%,100%{filter:drop-shadow(0 0 6px rgba(255,214,102,.6)) drop-shadow(0 0 2px #fff)}50%{filter:drop-shadow(0 0 26px rgba(255,214,102,1)) drop-shadow(0 0 8px #fff)}}
+.actor.holo img{filter:drop-shadow(0 0 18px rgba(79,227,214,.9)) brightness(1.1);animation:flicker 2.4s steps(1) infinite}
+@keyframes flicker{0%{opacity:.9}7%{opacity:.35}9%{opacity:.85}38%{opacity:.6}40%{opacity:.95}71%{opacity:.4}73%{opacity:.9}100%{opacity:.9}}
+
+/* ---------- glitch on backgrounds ---------- */
+.glitch{position:absolute;background-size:1920px 1080px;pointer-events:none;mix-blend-mode:normal;animation:glitch 3.2s steps(1) infinite}
+.glitch.strong{animation-duration:1.3s}
+@keyframes glitch{
+  0%,62%,100%{transform:none;filter:none;opacity:0}
+  63%{transform:translateX(-16px);filter:hue-rotate(80deg) saturate(2);opacity:1;clip-path:inset(10% 0 62% 0)}
+  65%{transform:translateX(22px);filter:hue-rotate(-60deg) brightness(1.4);opacity:1;clip-path:inset(48% 0 30% 0)}
+  67%{transform:translateX(-8px);opacity:1;clip-path:inset(72% 0 6% 0)}
+  69%{opacity:0}
+  84%{transform:translateX(12px);filter:hue-rotate(140deg) brightness(1.5);opacity:1;clip-path:inset(28% 0 50% 0)}
+  86%{opacity:0}
+}
+.scan{position:absolute;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(79,227,214,.10) 0 2px,transparent 2px 6px);mix-blend-mode:screen;animation:scan 3.2s steps(1) infinite}
+@keyframes scan{0%,60%,100%{opacity:0}62%,70%{opacity:1}84%,87%{opacity:.8}}
+
+/* ---------- HUD ---------- */
+#hud{position:absolute;left:28px;top:24px;display:flex;align-items:center;gap:14px;padding:10px 22px 10px 18px;border-radius:40px;background:rgba(255,248,234,.88);border:3px solid var(--brass);box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;transition:opacity .6s}
+#hud.on{opacity:1}
+#hud b{font-family:Comfortaa;font-weight:700;font-size:26px;margin-right:6px}
+#hud .slot{width:46px;height:62px;border-radius:12px;display:grid;place-items:center;background:rgba(122,83,32,.12)}
+#hud .slot img{height:58px;filter:grayscale(1) brightness(.9);opacity:.28;transition:all .8s}
+#hud .slot.have img{filter:none;opacity:1}
+
+#tools{position:absolute;right:24px;top:22px;display:flex;gap:12px;z-index:70}
+#tools button{width:64px;height:64px;border-radius:50%;background:rgba(255,248,234,.85);border:3px solid var(--brass);font-size:30px;line-height:1;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+#tools button:hover{background:#fff}
+#menu{position:absolute;right:24px;top:100px;z-index:70;background:var(--paper);border:4px solid var(--brass);border-radius:24px;padding:18px;display:none;min-width:420px;max-height:900px;overflow:auto;box-shadow:0 12px 30px rgba(0,0,0,.4)}
+#menu.on{display:block}
+#menu h3{font-family:Comfortaa;font-size:26px;margin:0 0 10px 6px}
+#menu button{display:block;width:100%;text-align:left;font-size:26px;padding:7px 16px;border-radius:14px}
+#menu button:hover{background:var(--paper2)}
+#menu small{display:block;font-size:20px;opacity:.7;margin:12px 6px 0}
+
+/* ---------- dialogue ---------- */
+#dialog{position:absolute;left:50%;bottom:22px;width:1560px;transform:translateX(-50%) translateY(30px);min-height:176px;padding:30px 230px 28px 48px;background:var(--paper);border:5px solid var(--brass-d);border-radius:30px;box-shadow:0 14px 34px rgba(0,0,0,.35),inset 0 0 0 4px #f1dfb5;opacity:0;transition:opacity .35s,transform .35s;z-index:20}
+#dialog:not(.on){pointer-events:none}
+#dialog.on{opacity:1;transform:translateX(-50%) translateY(0)}
+#name{position:absolute;left:40px;top:-30px;padding:6px 26px 8px;border-radius:18px;font-family:Comfortaa;font-weight:700;font-size:30px;color:#fff;background:var(--brass-d);box-shadow:0 4px 10px rgba(0,0,0,.25)}
+#name:empty{display:none}
+#text{font-size:37px;line-height:1.38}
+#text i{font-style:normal;color:var(--teal-d)}
+#next{position:absolute;right:30px;bottom:26px;padding:16px 30px;border-radius:22px;background:linear-gradient(#ffd66b,#f0a531);border:3px solid var(--brass-d);font-weight:800;font-size:32px;box-shadow:0 5px 0 var(--brass-d);transition:transform .1s}
+#next:active{transform:translateY(4px);box-shadow:0 1px 0 var(--brass-d)}
+#next.wait{animation:nudge 1.2s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(8px)}}
+#next[hidden]{display:none}
+#choices{display:flex;gap:22px;margin-top:20px;flex-wrap:wrap}
+#choices:empty{display:none}
+.ch{min-width:180px;padding:14px 30px;border-radius:22px;font-size:36px;font-weight:800;background:#fff;border:4px solid var(--brass);box-shadow:0 5px 0 var(--brass-d);transition:transform .1s,background .2s}
+.ch:hover{background:#fff4d6}
+.ch.right{background:#c7f0cf;border-color:var(--ok);box-shadow:0 5px 0 #1f6b2e}
+.ch.wrong{background:#ffd8c7;border-color:var(--bad);box-shadow:0 5px 0 #8f2f09;animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+.bigbtn{position:absolute;left:50%;transform:translateX(-50%);padding:26px 64px;border-radius:40px;font-family:Comfortaa;font-weight:700;font-size:52px;color:var(--ink);background:linear-gradient(#ffe08a,#f0a531);border:5px solid var(--brass-d);box-shadow:0 8px 0 var(--brass-d),0 0 40px rgba(255,214,102,.7);animation:pulse 1.6s ease-in-out infinite;z-index:30}
+@keyframes pulse{0%,100%{box-shadow:0 8px 0 var(--brass-d),0 0 20px rgba(255,214,102,.5)}50%{box-shadow:0 8px 0 var(--brass-d),0 0 60px rgba(255,214,102,1)}}
+
+/* ---------- overlays ---------- */
+.overlay{position:absolute;inset:0;z-index:15;display:none}
+.overlay.on{display:block}
+.dim{position:absolute;inset:0;background:rgba(20,12,6,.72);animation:fadein .5s}
+@keyframes fadein{from{opacity:0}}
+
+/* watch puzzle */
+#watchBox .watchImg{position:absolute;left:150px;top:130px;height:560px;filter:drop-shadow(0 20px 30px rgba(0,0,0,.5));animation:zoomin .7s cubic-bezier(.2,1.3,.4,1)}
+@keyframes zoomin{from{transform:scale(.3);opacity:0}}
+.note{position:absolute;left:310px;top:640px;padding:20px 40px 24px;background:#fbf0d2;border:2px solid #c9a86a;border-radius:6px;transform:rotate(-6deg);font-family:Comfortaa;font-weight:700;font-size:64px;letter-spacing:4px;box-shadow:0 10px 20px rgba(0,0,0,.4);animation:zoomin .7s .3s backwards}
+.note:before{content:"";position:absolute;left:50%;top:-14px;width:28px;height:28px;margin-left:-14px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8a7a,#b5281a)}
+#clock{position:absolute;left:1080px;top:50px;width:640px;height:640px;touch-action:none;animation:zoomin .7s .15s backwards}
+#clock .hand{cursor:grab}
+#clock.dragging .hand{cursor:grabbing}
+#checkClock{top:712px;left:1400px;animation:none;font-size:44px;padding:18px 54px}
+
+/* portal */
+#portal{position:absolute;inset:0;z-index:40;pointer-events:none;display:none}
+#portal.on{display:block}
+#portal .swirl{position:absolute;left:50%;top:50%;width:2600px;height:2600px;margin:-1300px 0 0 -1300px;border-radius:50%;
+  background:repeating-conic-gradient(from 0deg,rgba(255,214,102,.95) 0 9deg,rgba(79,227,214,.85) 14deg,rgba(255,255,255,.9) 20deg,rgba(255,170,60,.0) 30deg),radial-gradient(circle,#fff 0 4%,rgba(255,214,102,.9) 14%,rgba(18,12,8,.0) 60%);
+  -webkit-mask:radial-gradient(circle,transparent 0 3%,#000 12%,#000 60%,transparent 72%);mask:radial-gradient(circle,transparent 0 3%,#000 12%,#000 60%,transparent 72%);
+  filter:blur(3px);transform:scale(0) rotate(0);animation:swirl 2.6s cubic-bezier(.5,0,.6,1) forwards}
+#portal .swirl.b{animation-name:swirl2;opacity:.7}
+@keyframes swirl{to{transform:scale(1.2) rotate(1080deg)}}
+@keyframes swirl2{to{transform:scale(1) rotate(-900deg)}}
+#portal .flash{position:absolute;inset:0;background:#fff;opacity:0;animation:flash 3.4s ease forwards}
+@keyframes flash{0%,62%{opacity:0}80%{opacity:1}100%{opacity:1}}
+#fade{position:absolute;inset:0;z-index:45;pointer-events:none;background:#fff;opacity:0;transition:opacity .9s ease}
+#fade.black{background:#120c08}
+#fade.on{opacity:1}
+
+/* time map */
+#mapBox .holo{position:absolute;left:150px;top:118px;width:1620px;height:590px;border-radius:36px;
+  background:linear-gradient(180deg,rgba(14,60,66,.93),rgba(8,36,44,.95));border:3px solid rgba(79,227,214,.9);
+  box-shadow:0 0 40px rgba(79,227,214,.6),inset 0 0 60px rgba(79,227,214,.18);color:#e9fffb;overflow:hidden;
+  transform-origin:960px 470px;animation:holo .9s cubic-bezier(.2,1.2,.4,1)}
+@keyframes holo{from{transform:translate(0,180px) scale(.28,.3);opacity:0}}
+#mapBox .holo:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(79,227,214,.07) 0 2px,transparent 2px 5px);pointer-events:none}
+#mapBox h2{font-family:Comfortaa;font-weight:700;font-size:46px;text-align:center;margin-top:30px;letter-spacing:2px;color:#bff8f1;text-shadow:0 0 14px rgba(79,227,214,.8)}
+.tl{position:absolute;left:110px;right:110px;top:300px;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(79,227,214,.35),rgba(79,227,214,.9))}
+.tl:after{content:"";position:absolute;right:-26px;top:-13px;border:17px solid transparent;border-left:26px solid rgba(79,227,214,.95)}
+.era-node{position:absolute;top:304px;width:300px;margin-left:-150px;text-align:center}
+.era-node .dot{position:absolute;left:50%;top:-50px;width:100px;height:100px;margin-left:-50px;border-radius:50%;background:rgba(8,36,44,.95);border:4px solid rgba(79,227,214,.55);display:grid;place-items:center}
+.era-node .dot img{height:76px;filter:grayscale(1) brightness(1.4);opacity:.35}
+.era-node .nm{position:absolute;left:0;right:0;bottom:66px;font-size:30px;line-height:1.15;color:#bff8f1;font-weight:800}
+.era-node .cent{position:absolute;left:0;right:0;top:66px;font-family:Comfortaa;font-weight:700;font-size:40px;color:#fff}
+.era-node .cent small{display:block;font-family:Nunito;font-weight:600;font-size:24px;opacity:.75;margin-top:4px}
+.era-node.next .dot{border-color:#ffd66b;box-shadow:0 0 0 0 rgba(255,214,102,.9);animation:ring 1.4s infinite;cursor:pointer}
+.era-node.next .dot img{filter:none;opacity:1}
+.era-node.next{cursor:pointer}
+.era-node.done .dot img{filter:none;opacity:1}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,214,102,.9)}100%{box-shadow:0 0 0 34px rgba(255,214,102,0)}}
+.era-node .here{position:absolute;left:50%;top:172px;transform:translateX(-50%);white-space:nowrap;font-size:24px;font-weight:800;color:#120c08;background:#ffd66b;padding:4px 14px;border-radius:12px}
+.ad{position:absolute;top:252px;width:4px;height:196px;background:repeating-linear-gradient(180deg,#ffd66b 0 8px,transparent 8px 14px)}
+.ad span{position:absolute;top:204px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:22px;color:#ffd66b;font-weight:800}
+
+/* sockets highlight */
+.sock{position:absolute;width:64px;height:48px;margin:-24px 0 0 -32px;border-radius:50%;box-shadow:0 0 0 4px rgba(255,214,102,.95),0 0 26px 6px rgba(255,214,102,.85);opacity:0;pointer-events:none}
+.sock.on{animation:sock 1.2s ease-in-out 3}
+@keyframes sock{50%{opacity:1}}
+
+
+/* ---------- task panels ---------- */
+.panel{position:absolute;left:50%;top:56px;width:1400px;height:770px;margin-left:-700px;background:linear-gradient(#fbf1d4,#efdcae);border:5px solid #9b7337;border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,.5),inset 0 0 0 4px #f8e9c4;animation:zoomin .6s cubic-bezier(.2,1.2,.4,1)}
+.panel h2{font-family:Comfortaa;font-weight:700;font-size:44px;text-align:center;margin-top:26px;padding:0 290px;line-height:1.15}
+.panel .tag{position:absolute;top:28px;left:34px;font-size:24px;font-weight:800;color:#fff;background:#8a6224;padding:5px 16px;border-radius:14px}
+.panel .tag.bonus{background:#7b4fa8}
+.panel svg.lines{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.card{position:absolute;width:250px;height:112px;border-radius:22px;background:#fffaf0;border:4px solid #b58a46;font-family:Comfortaa;font-weight:700;font-size:62px;display:grid;place-items:center;box-shadow:0 6px 0 #8a6224;cursor:pointer;transition:background .2s,border-color .2s}
+.card.roman{background:linear-gradient(#efe3c6,#dccaa0);letter-spacing:4px}
+.card:hover{background:#fff4d6}
+.card.sel{border-color:#f0a531;box-shadow:0 0 0 7px rgba(240,165,49,.55),0 6px 0 #8a6224}
+.card.right{background:#c7f0cf;border-color:var(--ok);box-shadow:0 6px 0 #1f6b2e;cursor:default}
+.card.wrong{background:#ffd8c7;border-color:var(--bad);animation:shake .4s}
+.rule{position:absolute;left:0;right:0;text-align:center;font-size:30px}
+.rule b{color:#8a3c12}
+.ctile{position:absolute;width:112px;height:124px;border-radius:18px;display:grid;place-items:center;font-family:Comfortaa;font-weight:700;font-size:70px;background:linear-gradient(#efe3c6,#dccaa0);border:4px solid #9b7337;box-shadow:0 5px 0 #7a5320}
+.cslot{position:absolute;width:112px;height:124px;border-radius:18px;display:grid;place-items:center;font-family:Comfortaa;font-weight:700;font-size:70px;background:#fffaf0;border:4px dashed #b58a46}
+.cslot.act{border-style:solid;border-color:#f0a531;box-shadow:0 0 0 7px rgba(240,165,49,.5)}
+.cslot.ok{background:#c7f0cf;border:4px solid var(--ok)}
+.cslot.bad{background:#ffd8c7;border:4px solid var(--bad);animation:shake .4s}
+.carrow{position:absolute;font-size:44px;color:#8a3c12;font-weight:800}
+.kb{position:absolute;left:0;right:0;display:flex;justify-content:center;gap:8px}
+.key{width:68px;height:78px;border-radius:14px;background:#fff;border:3px solid #b58a46;box-shadow:0 4px 0 #8a6224;font-family:Comfortaa;font-weight:700;font-size:38px}
+.key:hover{background:#fff4d6}
+.key.hint{background:#ffe08a;border-color:#f0a531;animation:pulse 1s infinite}
+.choiceRow{position:absolute;left:0;right:0;display:flex;justify-content:center;gap:40px}
+.choiceRow .ch{font-size:36px}
+svg.sticks .st{cursor:pointer}
+svg.sticks .st:hover .wood{stroke:#ffd77a}
+svg.sticks .ghostS{cursor:pointer}
+svg.sticks .ghostS line{stroke:#f0a531;stroke-width:14;stroke-dasharray:14 12;opacity:.85}
+svg.sticks .ghostS:hover line{opacity:1;stroke:#e8590c}
+.hand{position:absolute;right:40px;top:120px;width:200px;text-align:center;font-size:24px;font-weight:800;cursor:pointer}
+
+/* ---------- reward ---------- */
+#reward{position:absolute;inset:0;z-index:16;pointer-events:none}
+#reward .rays{position:absolute;left:960px;top:400px;width:900px;height:900px;margin:-450px 0 0 -450px;border-radius:50%;background:repeating-conic-gradient(rgba(255,230,140,.55) 0 10deg,rgba(255,230,140,0) 10deg 20deg);-webkit-mask:radial-gradient(circle,#000 20%,transparent 70%);mask:radial-gradient(circle,#000 20%,transparent 70%);animation:spin 12s linear infinite,fadein .8s}
+@keyframes spin{to{transform:rotate(360deg)}}
+#reward .coreBig{position:absolute;left:960px;top:400px;height:380px;transform:translate(-50%,-50%);filter:drop-shadow(0 0 40px rgba(255,220,120,.9));animation:corein 1s cubic-bezier(.2,1.4,.4,1);transition:left 1.1s cubic-bezier(.6,0,.3,1),top 1.1s cubic-bezier(.6,0,.3,1),height 1.1s cubic-bezier(.6,0,.3,1),opacity .3s 1s}
+@keyframes corein{from{transform:translate(-50%,-50%) scale(0) rotate(-30deg)}}
+.frag{position:absolute;left:50%;top:110px;width:1100px;margin-left:-550px;padding:40px 56px 46px;background:linear-gradient(#fbf1d4,#efdcae);border:5px solid #9b7337;border-radius:26px;box-shadow:0 20px 50px rgba(0,0,0,.5);animation:zoomin .6s cubic-bezier(.2,1.2,.4,1);z-index:16}
+.frag .ft{display:inline-block;font-family:Comfortaa;font-weight:700;font-size:26px;color:#fff;background:#138a86;padding:6px 18px;border-radius:14px;margin-bottom:22px}
+.frag p{font-size:40px;line-height:1.4}
+.frag:before{content:"";position:absolute;inset:-5px;border-radius:26px;box-shadow:0 0 30px rgba(79,227,214,.6);pointer-events:none}
+.coreInSock{position:absolute;height:100px;transform:translate(-50%,-82%);filter:drop-shadow(0 0 14px rgba(255,220,120,.9));pointer-events:none;animation:fadein 1s}
+
+/* ---------- hologram of old Murko ---------- */
+.ghost{position:absolute;right:120px;top:300px;height:380px;pointer-events:none;z-index:13;opacity:0}
+.ghost img{height:100%}
+.ghost.run{animation:ghost 2.2s steps(1) forwards}
+@keyframes ghost{0%{opacity:0}8%{opacity:1}12%{opacity:.2}16%{opacity:1}55%{opacity:.85}58%{opacity:.1}62%{opacity:.9}88%{opacity:.6}92%{opacity:0}100%{opacity:0}}
+.ghost.s1 img{filter:brightness(0) blur(14px);opacity:.4;transform:scale(.85);transform-origin:bottom center}
+.ghost.s2 img{filter:brightness(0) blur(2px);opacity:.62}
+.ghost.s3 img{filter:brightness(0) drop-shadow(0 0 2px #4fe3d6) drop-shadow(0 0 3px #4fe3d6) drop-shadow(0 0 14px rgba(79,227,214,.9));opacity:.8}
+.ghost.s4 img{filter:saturate(.75) brightness(1.15) blur(1.5px) drop-shadow(0 0 16px rgba(79,227,214,.9));opacity:.5}
+.ghost.s5 img{filter:brightness(1.1) drop-shadow(0 0 22px rgba(79,227,214,1));opacity:.85}
+
+
+/* ---------- epoch 2 ---------- */
+.manuscript{position:absolute;left:110px;right:110px;top:150px;padding:34px 46px;background:linear-gradient(#f6e6bf,#ead39f);border:3px solid #a57a3a;border-radius:10px;box-shadow:inset 0 0 40px rgba(122,83,32,.35);font-size:50px;line-height:1.75;color:#2b1a0c}
+.manuscript .w{padding:2px 3px;margin:0 -3px;border-radius:10px;cursor:pointer;transition:background .2s}
+.manuscript .w:hover{background:rgba(240,165,49,.25)}
+.manuscript .w.cur{background:#ffe08a;box-shadow:0 0 0 3px #f0a531}
+.manuscript .w.fixed{background:#c7f0cf;color:#1f6b2e;cursor:default}
+.manuscript .w.no{background:#ffd8c7;animation:shake .4s}
+.counter{position:absolute;right:40px;top:30px;font-size:28px;font-weight:800;background:#fff;border:3px solid #b58a46;border-radius:16px;padding:6px 18px}
+.bq{position:absolute;width:112px;height:124px;border-radius:14px;display:grid;place-items:center;font-family:Comfortaa;font-weight:700;font-size:74px;color:#a31d16;background:radial-gradient(circle at 50% 40%,#fff7de,#f0cf7c);border:4px solid #8a3c12;box-shadow:inset 0 0 0 5px #f6e2a8,inset 0 0 0 8px #3f6b2a,0 6px 0 #6b2e0e;cursor:pointer;transition:left .4s,top .4s,transform .4s}
+.bq:hover{filter:brightness(1.07)}
+.bslot{position:absolute;width:112px;height:124px;border-radius:14px;border:4px dashed #b58a46;background:rgba(255,250,240,.6)}
+.bslot.ok{border:4px solid var(--ok);box-shadow:0 0 0 6px rgba(47,158,68,.35)}
+.bslot.bad{border:4px solid var(--bad);animation:shake .4s}
+.mrow{position:absolute;left:120px;right:120px;display:flex;align-items:center;gap:22px}
+.mrow .who{width:200px;font-family:Comfortaa;font-weight:700;font-size:44px}
+.mrow .ch{font-size:32px;min-width:200px;padding:12px 30px}
+.mrow .ch.on{background:#ffe08a;border-color:#f0a531}
+.mrow .ch.on.right{background:#c7f0cf;border-color:var(--ok)}
+.mrow .ch.on.wrong{background:#ffd8c7;border-color:var(--bad)}
+.clues{position:absolute;left:120px;right:120px;top:104px;font-size:30px;line-height:1.4;background:rgba(255,255,255,.55);border-radius:18px;padding:14px 26px}
+.pbtn{position:absolute;left:50%;transform:translateX(-50%);padding:16px 50px;border-radius:26px;font-family:Comfortaa;font-weight:700;font-size:38px;background:linear-gradient(#ffe08a,#f0a531);border:4px solid var(--brass-d);box-shadow:0 6px 0 var(--brass-d)}
+.whisper{position:absolute;padding:6px 22px;border-radius:24px;background:rgba(8,36,44,.62);font-family:Comfortaa;font-weight:700;font-size:40px;color:#bff8f1;text-shadow:0 0 12px #4fe3d6,0 0 4px #138a86;pointer-events:none;z-index:14;opacity:0;animation:whisper 2.2s ease forwards}
+@keyframes whisper{20%{opacity:1}70%{opacity:.9}100%{opacity:0;transform:translateY(-20px)}}
+
+
+/* ---------- epoch 3 ---------- */
+.wmap{position:absolute;left:120px;top:88px;width:1160px;height:560px}
+.wzone{position:absolute;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;border:4px dashed #8a3c12;background:rgba(255,250,240,.85);display:grid;place-items:center;font-weight:800;font-size:26px;color:#8a3c12;cursor:pointer;transition:transform .15s}
+.wzone:hover{transform:scale(1.15)}
+.wzone.no{background:#ffd8c7;border-color:var(--bad);animation:shake .4s}
+.wlabel{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-size:22px;font-weight:800;padding:4px 14px;border-radius:12px;background:#c7f0cf;border:3px solid var(--ok);pointer-events:none;animation:zoomin .4s}
+.wlabel.ocean{background:#d4eefc;border-color:#1c7ed6;color:#0b4f8a}
+.chips{position:absolute;left:40px;right:40px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.chip{font-size:24px;font-weight:800;padding:6px 16px;border-radius:14px;background:#fff;border:3px solid #b58a46;box-shadow:0 3px 0 #8a6224}
+.chip.ocean{border-color:#1c7ed6;box-shadow:0 3px 0 #0b4f8a;color:#0b4f8a}
+.chip.sel{background:#ffe08a;box-shadow:0 0 0 5px rgba(240,165,49,.5)}
+.chip.used{visibility:hidden}
+.sea{position:absolute;left:90px;top:120px;width:540px;height:540px;border-radius:10px;overflow:hidden;border:4px solid #0b4f8a;background:#7cc3e0}
+.sea .cell{position:absolute;width:90px;height:90px;border:1px solid rgba(255,255,255,.35)}
+.sea svg{position:absolute;left:0;top:0;pointer-events:none}
+.ship{position:absolute;width:90px;height:90px;transition:left .45s linear,top .45s linear;pointer-events:none}
+.compass{position:absolute;left:650px;top:112px;width:200px;height:200px}
+.cmds{position:absolute;left:870px;top:120px;width:470px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cmds .ch{font-size:30px;min-width:0;padding:12px 10px}
+.prog{position:absolute;left:660px;top:330px;width:690px;min-height:150px;padding:14px;border-radius:18px;background:#fffaf0;border:3px dashed #b58a46;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start}
+.prog .step{font-size:26px;font-weight:800;padding:6px 14px;border-radius:12px;background:#d4eefc;border:2px solid #1c7ed6;color:#0b4f8a}
+.prog .step.run{background:#ffe08a;border-color:#f0a531;color:#3b2412}
+.prog .empty{font-size:26px;opacity:.55;padding:8px}
+.pbtns{position:absolute;left:660px;top:520px;display:flex;gap:18px}
+.pbtns button{white-space:nowrap;font-family:Comfortaa;font-weight:700;font-size:28px;padding:12px 22px;border-radius:22px;border:4px solid var(--brass-d);box-shadow:0 5px 0 var(--brass-d);background:#fff}
+.pbtns .go{background:linear-gradient(#a8e6b0,#5cbf6a)}
+
+
+/* ---------- epoch 4 ---------- */
+.trackbox{position:absolute;left:80px;right:80px;top:120px;height:260px}
+.trackbox .rail{position:absolute;left:0;right:0;top:190px;height:14px;background:repeating-linear-gradient(90deg,#6b4214 0 10px,transparent 10px 34px),linear-gradient(#8a8a8a,#8a8a8a) 0 2px/100% 4px no-repeat,linear-gradient(#8a8a8a,#8a8a8a) 0 10px/100% 4px no-repeat}
+.trackbox .st{position:absolute;top:66px;font-size:24px;font-weight:800;text-align:center;width:160px;margin-left:-80px;white-space:nowrap}
+.trackbox .st:after{content:"";display:block;width:16px;height:64px;margin:6px auto 0;background:#8a3c12;border-radius:4px}
+.trackbox .dist{position:absolute;top:226px;font-family:Comfortaa;font-weight:700;font-size:36px;color:#8a3c12;text-align:center}
+.loco{position:absolute;top:84px;width:200px;height:120px;transition:left 2.2s cubic-bezier(.45,.05,.4,1)}
+.loco svg{transform:scaleX(-1)}
+.qbig{position:absolute;left:80px;right:80px;top:420px;font-size:44px;line-height:1.4;text-align:center}
+.formula{position:absolute;left:50%;transform:translateX(-50%);top:580px;display:flex;gap:12px}
+.formula span{white-space:nowrap;font-size:28px;font-weight:800;padding:8px 18px;border-radius:14px;background:#fff;border:3px solid #b58a46}
+.tline{position:absolute;left:70px;right:70px;top:150px;height:10px;border-radius:5px;background:linear-gradient(90deg,#b58a46,#8a3c12)}
+.tline:after{content:"";position:absolute;right:-24px;top:-12px;border:17px solid transparent;border-left:24px solid #8a3c12}
+.tslot{position:absolute;top:190px;width:230px;height:250px;margin-left:-115px;border-radius:18px;border:4px dashed #b58a46;background:rgba(255,250,240,.6)}
+.tslot .n{position:absolute;top:-62px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;background:#8a3c12;color:#fff;font-weight:800;font-size:26px;display:grid;place-items:center}
+.tslot.ok{border:4px solid var(--ok)}
+.icard{position:absolute;width:230px;height:250px;border-radius:18px;background:#fffaf0;border:4px solid #9b7337;box-shadow:0 6px 0 #7a5320;cursor:pointer;text-align:center;transition:left .45s,top .45s;padding-top:8px}
+.icard svg{width:150px;height:120px}
+.icard .nm{font-size:25px;font-weight:800;line-height:1.15;padding:0 8px;height:58px;display:flex;align-items:center;justify-content:center}
+.icard .yr{font-family:Comfortaa;font-weight:700;font-size:40px;color:#8a3c12}
+.icard.bad{border-color:var(--bad);background:#ffd8c7;animation:shake .4s}
+.icard.ok{border-color:var(--ok);background:#e8f8eb;cursor:default}
+.gearsvg{position:absolute;left:60px;top:150px;width:1280px;height:430px}
+.gearsvg .g{transform-box:fill-box;transform-origin:center}
+.gearsvg.spin .g.cw{animation:gcw 3s linear infinite}
+.gearsvg.spin .g.ccw{animation:gccw 3s linear infinite}
+@keyframes gcw{to{transform:rotate(360deg)}}
+@keyframes gccw{to{transform:rotate(-360deg)}}
+
+
+/* ---------- epoch 5 ---------- */
+.lab{position:absolute;left:80px;top:110px;width:500px;height:500px;border-radius:14px;overflow:hidden;background:#1d3b45;border:4px solid #4fe3d6;box-shadow:0 0 24px rgba(79,227,214,.5)}
+.lab .c{position:absolute;width:100px;height:100px}
+.lab .c.wall{background:repeating-linear-gradient(45deg,#2b4d58 0 10px,#24434d 10px 20px);box-shadow:inset 0 0 0 2px #1a3038}
+.lab .c.path{background:#f6e8c8;box-shadow:inset 0 0 0 2px #e6d3a6}
+.lab .goal{position:absolute;width:100px;height:100px;display:grid;place-items:center}
+.lab .goal img{height:84px;filter:drop-shadow(0 0 12px #c084fc)}
+.lab .bot{position:absolute;width:100px;height:100px;display:grid;place-items:center;transition:left .4s linear,top .4s linear}
+.lab .bot img{height:86px}
+.rep{position:absolute;left:620px;top:110px;width:720px;border-radius:20px;border:4px solid #7b4fa8;background:#f3ecfb;padding:16px 20px}
+.rep .hd{display:flex;align-items:center;gap:14px;font-family:Comfortaa;font-weight:700;font-size:34px;color:#4a2a78}
+.rep .hd button{width:54px;height:54px;border-radius:50%;font-size:34px;font-weight:800;background:#fff;border:3px solid #7b4fa8}
+.rep .hd .num{min-width:48px;text-align:center;font-size:46px}
+.rep .body{margin-top:14px;min-height:96px;border-radius:14px;border:3px dashed #7b4fa8;background:#fff;padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.rep .body .step{font-size:30px;font-weight:800;padding:8px 18px;border-radius:12px;background:#d4eefc;border:2px solid #1c7ed6;color:#0b4f8a}
+.rep .body .step.run{background:#ffe08a;border-color:#f0a531;color:#3b2412}
+.rep .body .empty{font-size:26px;opacity:.55}
+.cmds5{position:absolute;left:620px;top:350px;width:720px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.cmds5 .ch{font-size:27px;min-width:0;padding:12px 4px;white-space:nowrap}
+.pb5{position:absolute;left:620px;top:445px;display:flex;gap:16px}
+.pb5 button{white-space:nowrap;font-family:Comfortaa;font-weight:700;font-size:28px;padding:12px 22px;border-radius:22px;border:4px solid var(--brass-d);box-shadow:0 5px 0 var(--brass-d);background:#fff}
+.pb5 .go{background:linear-gradient(#a8e6b0,#5cbf6a)}
+.algo{position:absolute;left:260px;right:260px;top:130px;counter-reset:a}
+.algo div{font-size:38px;font-weight:800;margin:14px 0;padding:14px 24px;border-radius:16px;background:#fff;border:3px solid #b58a46;transition:all .4s}
+.algo div b{display:inline-block;width:50px;color:#8a3c12}
+.algo div.ok{background:#c7f0cf;border-color:var(--ok)}
+.algo div.bad{background:#ffd8c7;border-color:var(--bad)}
+.ffcats{position:absolute;left:60px;right:60px;top:100px;display:flex;gap:16px}
+.ffcats div{flex:1;padding:12px 16px;border-radius:16px;font-size:26px;line-height:1.3;background:#fff;border:3px solid #ccc}
+.ffcats div b{display:block;font-family:Comfortaa;font-size:30px}
+.ffcats .f{border-color:var(--ok)} .ffcats .f b{color:#1f6b2e}
+.ffcats .k{border-color:var(--bad)} .ffcats .k b{color:#8f2f09}
+.ffcats .s{border-color:#1c7ed6} .ffcats .s b{color:#0b4f8a}
+.ffcard{position:absolute;left:150px;right:150px;top:300px;min-height:170px;display:grid;place-items:center;text-align:center;padding:26px 40px;font-size:46px;font-weight:800;line-height:1.3;border-radius:24px;background:#d4f5f1;border:4px solid #138a86;box-shadow:0 0 30px rgba(79,227,214,.45);animation:zoomin .4s}
+.ffprog{position:absolute;left:0;right:0;top:510px;text-align:center;font-size:28px;font-weight:800;color:#5b4a2a}
+.ffbtns{position:absolute;left:0;right:0;top:575px;display:flex;justify-content:center;gap:24px}
+.ffbtns .ch{font-size:38px;min-width:240px}
+.ffbtns .ch.f{border-color:var(--ok)} .ffbtns .ch.k{border-color:var(--bad)} .ffbtns .ch.s{border-color:#1c7ed6}
+.inv{position:absolute;left:60px;right:60px;top:100px}
+.inv .row{margin-bottom:22px}
+.inv .q{font-family:Comfortaa;font-weight:700;font-size:30px;margin:0 0 8px 6px}
+.inv .opts{display:flex;gap:12px}
+.inv .opts .ch{flex:1;font-size:30px;min-width:0;padding:14px 8px}
+.inv .opts .ch.on{background:#e9dcfb;border-color:#7b4fa8;box-shadow:0 5px 0 #4a2a78}
+.invcard{position:absolute;left:50%;top:150px;width:1000px;margin-left:-500px;padding:34px 48px 40px;border-radius:26px;background:linear-gradient(#f3ecfb,#e2d4f7);border:5px solid #7b4fa8;box-shadow:0 0 40px rgba(192,132,252,.7);text-align:center;animation:zoomin .6s cubic-bezier(.2,1.2,.4,1)}
+.invcard .t{font-family:Comfortaa;font-weight:700;font-size:34px;color:#4a2a78}
+.invcard input{margin:18px 0 10px;width:90%;text-align:center;font:800 54px Nunito,sans-serif;color:#3b2412;background:#fff;border:3px dashed #7b4fa8;border-radius:16px;padding:8px}
+.invcard p{font-size:36px;line-height:1.45}
+.invcard small{display:block;font-size:22px;opacity:.6}
+.screenMsg{position:absolute;left:735px;top:368px;width:460px;height:210px;display:grid;place-items:center;text-align:center;padding:16px;font-family:Comfortaa;font-weight:700;font-size:34px;line-height:1.3;color:#0d5c58;text-shadow:0 0 10px rgba(79,227,214,.8);animation:fadein 1.2s}
+.actor.oldholo img{filter:brightness(1.08) drop-shadow(0 0 22px rgba(79,227,214,1)) drop-shadow(0 0 4px #bff8f1);animation:oldin 3s ease forwards,holobob 3.4s ease-in-out 3s infinite}
+@keyframes oldin{0%{opacity:0;filter:brightness(0) blur(8px) drop-shadow(0 0 22px #4fe3d6)}20%{opacity:.6}25%{opacity:.2}35%{opacity:.8}40%{opacity:.4}100%{opacity:.92}}
+@keyframes holobob{0%,100%{transform:translateY(0);opacity:.92}50%{transform:translateY(-10px);opacity:.85}}
+#cert{position:absolute;inset:0;z-index:12;display:none}
+#cert.on{display:block}
+#cert canvas{position:absolute;left:0;top:0;width:1920px;height:1080px}
+.certbar{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);display:flex;gap:18px;align-items:center;padding:14px 24px;border-radius:26px;background:rgba(255,248,234,.95);border:4px solid var(--brass-d);box-shadow:0 10px 26px rgba(0,0,0,.35);font-size:30px;font-weight:800}
+.certbar input{font:800 30px Nunito,sans-serif;width:150px;text-align:center;padding:6px 10px;border-radius:12px;border:3px solid #b58a46}
+.certbar button{white-space:nowrap;font-family:Comfortaa;font-weight:700;font-size:28px;padding:12px 22px;border-radius:20px;border:4px solid var(--brass-d);box-shadow:0 5px 0 var(--brass-d);background:linear-gradient(#ffe08a,#f0a531)}
+.certbar button.plain{background:#fff}
+
+.savebox{position:absolute;inset:0;z-index:65;background:rgba(20,12,6,.8);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.savebox img{width:1100px;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.6);-webkit-user-select:auto;user-select:auto}
+.savebox p{max-width:1100px;text-align:center;font-size:30px;color:#fff6dc}
+.savebox button{font-family:Comfortaa;font-weight:700;font-size:30px;padding:12px 36px;border-radius:20px;border:4px solid var(--brass-d);background:#fff}
+/* title */
+#title{position:absolute;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(18,12,8,.25),rgba(18,12,8,.75))}
+#title h1{font-family:Comfortaa;font-weight:700;font-size:120px;color:#fff6dc;text-shadow:0 0 30px rgba(255,214,102,.9),0 6px 0 #7a5320;text-align:center;line-height:1.1}
+#title p{font-size:40px;color:#ffe9b8;margin:24px 0 70px;text-shadow:0 2px 8px #000}
+#title .bigbtn{position:static;transform:none}
+#title.off{display:none}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bg" id="bgA"></div><div class="bg" id="bgB"></div>
+  <div id="fx"></div>
+  <div id="actors"></div>
+  <div id="hud"><b>Ядра</b></div>
+  <div class="overlay" id="watchBox"></div>
+  <div class="overlay" id="mapBox"></div>
+  <div class="overlay" id="taskBox"></div>
+  <div id="reward"></div>
+  <div id="dialog"><div id="name"></div><div id="text"></div><div id="choices"></div><button id="next">Далі ▶</button></div>
+  <div id="cert"></div>
+  <div id="portal"></div>
+  <div id="fade"></div>
+  <div id="tools"><button id="btnFull" title="На весь екран">⛶</button><button id="btnMenu" title="Меню вчителя">☰</button></div>
+  <div id="menu"></div>
+  <div id="title">
+    <h1>Мурко<br>і Архів часу</h1>
+    <p>Інтегрований урок-квест · 4 клас</p>
+    <button class="bigbtn" id="btnStart">Почати пригоду</button>
+  </div>
+</div>
+
+<script>
+/* ================== базові налаштування ================== */
+const A = 'assets/';
+const IMG = {
+  murko_calm:A+'sprites/murko_calm.webp', murko_surprised:A+'sprites/murko_surprised.webp',
+  murko_happy:A+'sprites/murko_happy.webp', murko_thinking:A+'sprites/murko_thinking.webp',
+  murko_wave:A+'sprites/murko_wave.webp', murko_old:A+'sprites/murko_old.webp',
+  byte:A+'sprites/byte.webp', chron:A+'sprites/chron.webp', watch:A+'sprites/watch.webp',
+  hypatia:A+'sprites/hypatia.webp', nestor:A+'sprites/nestor.webp', leona:A+'sprites/leona.webp', iskra:A+'sprites/iskra.webp',
+  core_gold:A+'sprites/core_gold.webp', core_red:A+'sprites/core_red.webp', core_blue:A+'sprites/core_blue.webp',
+  core_orange:A+'sprites/core_orange.webp', core_violet:A+'sprites/core_violet.webp'
+};
+const BG = {
+  attic:A+'bg/attic.webp', city:A+'bg/city3027.webp', hall:A+'bg/archive_hall.webp', corridor:A+'bg/archive_corridor.webp',
+  era1:A+'bg/era1_alexandria.webp', era2:A+'bg/era2_kyiv.webp', era3:A+'bg/era3_workshop.webp', era4:A+'bg/era4_station.webp',
+  cert:A+'bg/certificate_frame.webp'
+};
+const CORES = ['core_gold','core_red','core_blue','core_orange','core_violet'];
+const ERAS = [
+  {name:'Давній світ', cent:'III ст.', sub:'до н. е.', x:0},
+  {name:'Середньовіччя', cent:'XI ст.', sub:'Київська Русь', x:1},
+  {name:'Відродження<br>і відкриття', cent:'XV–XVI ст.', sub:'', x:2},
+  {name:'Доба<br>винаходів', cent:'XIX–XX ст.', sub:'', x:3},
+  {name:'Архів 3027', cent:'XXXI ст.', sub:'3027 рік', x:4}
+];
+const NAMES = {murko:'Мурко', byte:'Байт', chron:'Хрон', hypatia:'Гіпатія', nestor:'Нестор', leona:'Леона', iskra:'Іскра', oldm:'Старий Мурко', screen:'Екран Архіву', narr:''};
+const NAME_COLORS = {murko:'#c4621d', byte:'#1f8f9a', chron:'#138a86', hypatia:'#5c7f1e', nestor:'#8a3c12', leona:'#b0452a', iskra:'#5b4a8a', oldm:'#138a86', screen:'#138a86'};
+
+const state = { cores:[false,false,false,false,false] };
+
+const $ = s => document.querySelector(s);
+const stage = $('#stage');
+function fit(){ const s = Math.min(innerWidth/1920, innerHeight/1080); stage.style.transform = `translate(-50%,-50%) scale(${s})`; }
+addEventListener('resize', fit); fit();
+Object.values(IMG).concat(Object.values(BG)).forEach(src => { const i = new Image(); i.src = src; });
+
+/* ================== скасування сцен ================== */
+const ABORT = Symbol('abort');
+let cancels = new Set();
+function cancellable(executor){
+  return new Promise((res, rej) => {
+    const c = () => rej(ABORT); cancels.add(c);
+    executor(v => { cancels.delete(c); res(v); }, c);
+  });
+}
+function cancelAll(){ const cs = [...cancels]; cancels.clear(); cs.forEach(c => c()); }
+const sleep = ms => cancellable(res => { const t = setTimeout(res, ms); });
+
+/* ================== фон ================== */
+let bgFlip = false;
+function setBg(key){
+  const a = $('#bgA'), b = $('#bgB');
+  const [on, off] = bgFlip ? [a, b] : [b, a]; bgFlip = !bgFlip;
+  on.style.backgroundImage = `url(${BG[key]})`; on.classList.add('on'); off.classList.remove('on');
+}
+function clearFx(){ $('#fx').innerHTML = ''; }
+function glitchRegion(bgKey, x, y, w, h, strong){
+  const g = document.createElement('div'); g.className = 'glitch' + (strong ? ' strong' : '');
+  Object.assign(g.style, {left:x+'px', top:y+'px', width:w+'px', height:h+'px', backgroundImage:`url(${BG[bgKey]})`, backgroundPosition:`-${x}px -${y}px`});
+  const s = document.createElement('div'); s.className = 'scan';
+  Object.assign(s.style, {left:x+'px', top:y+'px', width:w+'px', height:h+'px', animationDuration: strong ? '1.3s' : '3.2s'});
+  $('#fx').append(g, s); return [g, s];
+}
+
+/* ================== персонажі ================== */
+const actors = {};
+function show(key, o){
+  let el = actors[key];
+  if(!el){ el = document.createElement('div'); el.className = 'actor hidden'; el.innerHTML = '<img alt="">'; $('#actors').append(el); actors[key] = el; }
+  const img = el.querySelector('img');
+  img.src = IMG[o.img || key];
+  el.style.height = (o.h || 400) + 'px';
+  el.style.zIndex = o.z || 1;
+  el.classList.toggle('flip', !!o.flip);
+  if(o.from !== undefined){
+    el.style.transition = 'none'; el.style.left = o.from + 'px'; el.style.top = o.y + 'px';
+    el.offsetWidth; el.style.transition = '';
+  }
+  el.style.left = o.x + 'px'; el.style.top = o.y + 'px';
+  requestAnimationFrame(() => el.classList.remove('hidden'));
+  return el;
+}
+function emo(key, img){ if(actors[key]) actors[key].querySelector('img').src = IMG[img]; }
+function hide(key){ if(actors[key]) actors[key].classList.add('hidden'); }
+function clearActors(){ $('#actors').innerHTML = ''; for(const k in actors) delete actors[k]; }
+function talk(key){ const el = actors[key]; if(!el) return; el.classList.remove('talk'); void el.offsetWidth; el.classList.add('talk'); }
+
+/* ================== діалоги ================== */
+let typing = null, advance = null;
+const dlg = $('#dialog'), nameEl = $('#name'), textEl = $('#text'), nextBtn = $('#next'), choicesEl = $('#choices');
+function say(who, text, o = {}){
+  if(o.emo) emo(who === 'murko' ? 'murko' : who, o.emo);
+  nameEl.textContent = NAMES[who] ?? who;
+  nameEl.style.background = NAME_COLORS[who] || 'var(--brass-d)';
+  choicesEl.innerHTML = ''; nextBtn.hidden = !!o.noNext; nextBtn.classList.remove('wait');
+  dlg.classList.add('on'); talk(who);
+  return cancellable((res, rej) => {
+    let i = 0; const html = text; textEl.innerHTML = '';
+    const plain = html.replace(/<[^>]+>/g, '');
+    clearInterval(typing);
+    typing = setInterval(() => {
+      i += 2; if(i >= plain.length){ clearInterval(typing); typing = null; textEl.innerHTML = html; nextBtn.classList.add('wait'); if(o.noNext) res(); return; }
+      textEl.textContent = plain.slice(0, i);
+    }, 28);
+    if(o.noNext) return;
+    advance = () => {
+      if(typing){ clearInterval(typing); typing = null; textEl.innerHTML = html; nextBtn.classList.add('wait'); return; }
+      advance = null; res();
+    };
+  });
+}
+function hideDialog(){ dlg.classList.remove('on'); advance = null; }
+nextBtn.onclick = () => advance && advance();
+addEventListener('keydown', e => {
+  if(['Space','Enter','ArrowRight'].includes(e.code) && advance && !$('#title:not(.off)')){ e.preventDefault(); advance(); }
+  if(e.code === 'KeyF') toggleFull();
+});
+function choose(options, correct, onWrong){
+  return cancellable(res => {
+    choicesEl.innerHTML = ''; nextBtn.hidden = true;
+    choicesEl.style.visibility = 'hidden'; setTimeout(() => choicesEl.style.visibility = '', 600);
+    options.forEach(op => {
+      const b = document.createElement('button'); b.className = 'ch'; b.textContent = op;
+      b.onclick = async () => {
+        if(op === correct){ b.classList.add('right'); [...choicesEl.children].forEach(x => x.disabled = true); setTimeout(() => res(op), 900); }
+        else { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); onWrong && onWrong(op); }
+      };
+      choicesEl.append(b);
+    });
+  });
+}
+function bigButton(label, y = 520){
+  return cancellable(res => {
+    const b = document.createElement('button'); b.className = 'bigbtn'; b.textContent = label; b.style.top = y + 'px';
+    b.onclick = () => { b.remove(); res(); };
+    stage.append(b); cancels.add(() => b.remove());
+  });
+}
+function waitClick(el){ return cancellable(res => { el.addEventListener('click', () => res(), {once:true}); }); }
+
+/* ================== переходи ================== */
+async function fadeTo(fn, color = 'black'){
+  const f = $('#fade'); f.className = color === 'white' ? 'on' : 'black on';
+  await sleep(900); fn(); await sleep(150); f.classList.remove('on');
+}
+function hud(on){ $('#hud').classList.toggle('on', on); }
+function buildHud(){
+  const h = $('#hud'); h.querySelectorAll('.slot').forEach(s => s.remove());
+  CORES.forEach((c, i) => { const s = document.createElement('div'); s.className = 'slot' + (state.cores[i] ? ' have' : ''); s.innerHTML = `<img src="${IMG[c]}" alt="">`; h.append(s); });
+}
+
+/* ================== СЦЕНА 1. Горище ================== */
+async function scene1(){
+  setBg('attic'); hud(false);
+  show('murko', {img:'murko_calm', x:560, y:900, h:420, from:560});
+  const w = show('watch', {x:1166, y:596, h:118, z:2});
+  await sleep(700);
+  await say('murko', 'Скільки старих речей на горищі… Книжки, скриня, глобус… А що це там блищить на поличці?', {emo:'murko_calm'});
+  w.classList.add('clickable', 'glow');
+  await say('narr', 'Натисніть на поличку, щоб роздивитися блискучу річ.', {noNext:true});
+  await waitClick(w);
+  w.classList.remove('clickable', 'glow'); hideDialog();
+  await watchPuzzle();
+}
+
+/* ---- годинник ---- */
+function clockSVG(){
+  let s = `<svg id="clock" viewBox="-320 -320 640 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="rim" cx="40%" cy="35%"><stop offset="0" stop-color="#ffe7a3"/><stop offset=".55" stop-color="#c9952f"/><stop offset="1" stop-color="#7a5320"/></radialGradient>
+    <radialGradient id="face" cx="45%" cy="40%"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efe1c0"/></radialGradient>
+    <filter id="sh"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-opacity=".35"/></filter>
+  </defs>
+  <circle r="306" fill="url(#rim)" stroke="#5a3a14" stroke-width="6"/>
+  <circle r="262" fill="url(#face)" stroke="#8a6224" stroke-width="5"/>`;
+  for(let i = 0; i < 60; i++){
+    const a = i * 6 * Math.PI / 180, big = i % 5 === 0, r1 = big ? 222 : 236, r2 = 250;
+    s += `<line x1="${(r1*Math.sin(a)).toFixed(1)}" y1="${(-r1*Math.cos(a)).toFixed(1)}" x2="${(r2*Math.sin(a)).toFixed(1)}" y2="${(-r2*Math.cos(a)).toFixed(1)}" stroke="#3b2412" stroke-width="${big?7:3}" stroke-linecap="round"/>`;
+  }
+  for(let n = 1; n <= 12; n++){
+    const a = n * 30 * Math.PI / 180, r = 182;
+    s += `<text x="${(r*Math.sin(a)).toFixed(1)}" y="${(-r*Math.cos(a)+19).toFixed(1)}" text-anchor="middle" font-family="Comfortaa" font-weight="700" font-size="56" fill="#3b2412">${n}</text>`;
+  }
+  s += `<g id="hHour" class="hand" filter="url(#sh)"><line y1="20" y2="-200" stroke="transparent" stroke-width="70"/><path d="M-13 22 L-9 -120 L0 -150 L9 -120 L13 22 Z" fill="#3b2412"/></g>
+  <g id="hMin" class="hand" filter="url(#sh)"><line y1="30" y2="-260" stroke="transparent" stroke-width="60"/><path d="M-8 30 L-6 -200 L0 -232 L6 -200 L8 30 Z" fill="#7a2e12"/></g>
+  <circle r="16" fill="#c9952f" stroke="#3b2412" stroke-width="4"/></svg>`;
+  return s;
+}
+async function watchPuzzle(){
+  const box = $('#watchBox');
+  box.innerHTML = `<div class="dim"></div><img class="watchImg" src="${IMG.watch}" alt=""><div class="note">3 : 27</div>`;
+  box.classList.add('on');
+  await sleep(600);
+  await say('murko', 'Ого, старовинний кишеньковий годинник! А на кришці — буква <i>М</i>… Як у моєму імені! Дивно…', {emo:'murko_surprised'});
+  await say('murko', 'Стрілок немає — годинник зупинився. А до ланцюжка прив’язана записка: <i>3 : 27</i>. Може, треба поставити такий час?', {emo:'murko_thinking'});
+  box.insertAdjacentHTML('beforeend', clockSVG());
+  const btn = document.createElement('button'); btn.className = 'bigbtn'; btn.id = 'checkClock'; btn.textContent = 'Перевірити'; box.append(btn);
+  const clk = makeClock($('#clock'));
+  await say('narr', 'Перетягніть стрілки: <i>довгу</i> — хвилинну, <i>коротку</i> — годинну. Поставте час <i>3 год 27 хв</i>.', {noNext:true});
+  await cancellable(res => {
+    btn.onclick = async () => {
+      const T = ((clk.T % 720) + 720) % 720, m = T % 60, h = Math.floor(T / 60) || 12;
+      if(T === 207){ btn.remove(); res(); return; }
+      if(m !== 27) await say('murko', `Поки що годинник показує ${h} год ${String(m).padStart(2,'0')} хв. Довга стрілка має показувати <i>27 хвилин</i> — це на 2 поділки далі за цифру 5.`, {emo:'murko_thinking', noNext:true});
+      else await say('murko', `Хвилини вже правильні! А коротка стрілка має стояти <i>між 3 і 4</i> — бо вже минуло 3 години.`, {emo:'murko_thinking', noNext:true});
+    };
+  });
+  clk.lock();
+  await say('murko', 'Ой! Стрілки закрутилися самі — у зворотний бік!', {emo:'murko_surprised', noNext:true});
+  await clk.spinBack(2600);
+  hideDialog();
+  await portal();
+}
+function makeClock(svg){
+  const H = svg.querySelector('#hHour'), M = svg.querySelector('#hMin');
+  const c = {T:0, locked:false};
+  const draw = () => {
+    const t = ((c.T % 720) + 720) % 720;
+    H.setAttribute('transform', `rotate(${t / 2})`);
+    M.setAttribute('transform', `rotate(${(t % 60) * 6})`);
+  };
+  const angle = e => {
+    const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    const q = p.matrixTransform(svg.getScreenCTM().inverse());
+    let a = Math.atan2(q.x, -q.y) * 180 / Math.PI; return (a + 360) % 360;
+  };
+  let drag = null;
+  const down = which => e => { if(c.locked) return; e.preventDefault(); drag = which; svg.classList.add('dragging'); svg.setPointerCapture(e.pointerId); };
+  H.addEventListener('pointerdown', down('h')); M.addEventListener('pointerdown', down('m'));
+  svg.addEventListener('pointermove', e => {
+    if(!drag) return;
+    const a = angle(e), t = ((c.T % 720) + 720) % 720, h = Math.floor(t / 60), m = t % 60;
+    if(drag === 'm'){
+      const nm = Math.round(a / 6) % 60; let nh = h;
+      if(m > 45 && nm < 15) nh = (h + 1) % 12; else if(m < 15 && nm > 45) nh = (h + 11) % 12;
+      c.T = nh * 60 + nm;
+    } else {
+      const nh = Math.floor(a / 30) % 12; c.T = nh * 60 + m;
+    }
+    draw();
+  });
+  const up = () => { drag = null; svg.classList.remove('dragging'); };
+  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+  c.lock = () => { c.locked = true; };
+  c.spinBack = ms => cancellable(res => {
+    const start = performance.now(), T0 = c.T;
+    const step = now => {
+      const k = Math.min(1, (now - start) / ms), e = k * k;
+      c.T = T0 - e * 720 * 3; draw();
+      if(k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+  draw(); return c;
+}
+async function portal(){
+  const p = $('#portal');
+  p.innerHTML = '<div class="swirl"></div><div class="swirl b"></div><div class="flash"></div>';
+  p.classList.add('on');
+  await sleep(3000);
+  $('#watchBox').classList.remove('on'); $('#watchBox').innerHTML = '';
+  clearActors();
+  await run(scene2, 'fromPortal');
+}
+
+/* ================== СЦЕНА 2. Місто 3027 ================== */
+async function scene2(mode){
+  setBg('city'); clearFx(); hud(false);
+  const dome = glitchRegion('city', 1080, 40, 660, 500);
+  if(mode === 'fromPortal'){
+    const f = $('#fade'); f.style.transition = 'none'; f.className = 'on'; void f.offsetWidth; f.style.transition = '';
+    $('#portal').classList.remove('on'); $('#portal').innerHTML = '';
+    await sleep(200); f.classList.remove('on'); await sleep(500);
+  }
+  show('murko', {img:'murko_surprised', x:620, y:890, h:400, from:620});
+  await sleep(900);
+  await say('murko', 'Ой! Де це я опинився? Які дивні будинки… І ліхтарики летять просто в небі!', {emo:'murko_surprised'});
+  const b = show('byte', {x:1360, y:885, h:380, from:2200});
+  b.classList.add('roll'); await sleep(1450); b.classList.remove('roll');
+  await say('byte', 'Обережно! Хто ти? Як ти потрапив до міста майбутнього?');
+  await say('murko', 'Я Мурко! Я просто торкнувся старого годинника… і ось я тут.', {emo:'murko_calm'});
+  await say('byte', 'Годинник?! Хрон казав, що прийде той, хто знайде годинник. Це ти! Ласкаво просимо у <i>3027 рік</i>!');
+  await say('murko', '3027?! Друзі, а скільки це років від нашого часу? Ми ж живемо у <i>2027</i> році.', {emo:'murko_wave'});
+  await say('murko', 'Порахуйте: <i>3027 − 2027 = ?</i>', {emo:'murko_thinking', noNext:true});
+  await choose(['100', '1000', '10 000', '5054'], '1000', async op => {
+    textEl.innerHTML = op === '5054' ? 'Ні-ні, тут треба <i>відняти</i>, а не додати! 3027 − 2027 = ?' : `Не ${op}… Порівняйте розряди: тисячі 3 і 2, а сотні, десятки й одиниці однакові.`;
+  });
+  emo('murko', 'murko_happy');
+  await say('byte', 'Правильно! Рівно <i>тисяча років</i> — ціле тисячоліття! За цей час Архів часу зібрав усі знання людства…');
+  dome.forEach(d => d.remove()); glitchRegion('city', 1080, 40, 660, 500, true);
+  await say('byte', '…і тепер вони можуть зникнути. Бачите, як мерехтить купол? Наш Архів руйнується. П’ять ядер, які підтримують його роботу, зникли!');
+  await say('murko', 'І що тепер робити?', {emo:'murko_thinking'});
+  await say('byte', 'Чотири ядра розлетілися по епохах минулого, а п’яте сховалося десь у самому Архіві. Але самому тобі не впоратися…');
+  await say('murko', 'Друзі, допоможете мені врятувати історію людства?', {emo:'murko_wave', noNext:true});
+  await bigButton('Так, вирушаємо!', 360);
+  emo('murko', 'murko_happy'); hideDialog();
+  await sleep(500);
+  await fadeTo(() => { clearActors(); clearFx(); run(scene3); });
+}
+
+/* ================== СЦЕНА 3. Зала Архіву ================== */
+const SOCKETS = [[822,676],[889,688],[962,693],[1040,688],[1106,676]];
+async function scene3(){
+  setBg('hall'); clearFx(); hud(false);
+  glitchRegion('hall', 730, 360, 470, 225);
+  SOCKETS.forEach(([x, y]) => { const s = document.createElement('div'); s.className = 'sock'; s.style.left = x + 'px'; s.style.top = y + 'px'; $('#fx').append(s); });
+  show('murko', {img:'murko_surprised', x:400, y:890, h:400, from:400});
+  show('byte', {x:1520, y:895, h:390, from:1520});
+  await sleep(800);
+  await say('byte', 'Це головна зала Архіву часу. Подивіться на п’єдестал: тут мають стояти <i>п’ять ядер</i>. А гнізда — порожні…');
+  document.querySelectorAll('.sock').forEach(s => s.classList.add('on'));
+  await say('murko', 'Як тихо тут… І екран на стіні мерехтить.', {emo:'murko_thinking'});
+  const ch = show('chron', {x:965, y:598, h:250, from:965, z:0});
+  ch.classList.add('holo');
+  await say('chron', '…Хранителі… ви тут… Сигнал дуже слабкий… Я — <i>Хрон</i>… Відкриваю… карту часу…');
+  hide('chron');
+  await timeMap(MAP_INTRO);
+}
+const ERA_SCENES = [() => era1, () => era2, () => era3, () => era4, () => era5];
+function timeMap(lines){
+  const box = $('#mapBox');
+  const left = 230, step = (1620 - 460) / 4;
+  const nextI = state.cores.indexOf(false);
+  let nodes = '';
+  ERAS.forEach((e, i) => {
+    const cls = state.cores[i] ? 'done' : (i === nextI ? 'next' : '');
+    nodes += `<div class="era-node ${cls}" data-i="${i}" style="left:${left + i * step}px">
+      ${i === 4 ? '<div class="here">Ми тут</div>' : ''}
+      <div class="nm">${e.name}</div><div class="dot"><img src="${IMG[CORES[i]]}" alt=""></div>
+      <div class="cent">${e.cent}<small>${e.sub}</small></div></div>`;
+  });
+  box.innerHTML = `<div class="holo"><h2>КАРТА ЧАСУ</h2><div class="tl"></div>
+    <div class="ad" style="left:${left + step * .45}px"><span>початок нашої ери</span></div>${nodes}</div>`;
+  box.classList.add('on');
+  return (async () => {
+    await sleep(900);
+    hud(true); buildHud();
+    for(const [who, text, o] of lines.slice(0, -1)) await say(who, text, o);
+    const [lw, lt, lo] = lines[lines.length - 1];
+    await say(lw, lt, Object.assign({}, lo, {noNext:true}));
+    const n = box.querySelector('.era-node.next');
+    await waitClick(n);
+    hideDialog();
+    const target = ERA_SCENES[nextI]();
+    await fadeTo(() => { box.classList.remove('on'); box.innerHTML = ''; clearActors(); clearFx(); run(target); });
+  })();
+}
+const MAP_INTRO = [
+  ['byte', 'Ось карта часу! Століття записані <i>римськими цифрами</i>. Ми зараз тут — у XXXI столітті.'],
+  ['byte', 'Рухаємося від найдавніших часів. У кожній епосі ядро охороняє страж — він віддасть його лише тим, хто пройде випробування!'],
+  ['murko', 'Тоді вперед — у <i>Давній світ</i>! Натисніть на світлу точку на карті.', {emo:'murko_happy'}]
+];
+
+/* ================== повернення в Архів ================== */
+function placeCores(){
+  document.querySelectorAll('.coreInSock').forEach(e => e.remove());
+  state.cores.forEach((have, i) => {
+    if(!have) return;
+    const [x, y] = SOCKETS[i]; const im = document.createElement('img');
+    im.className = 'coreInSock'; im.src = IMG[CORES[i]]; im.style.left = x + 'px'; im.style.top = y + 'px';
+    $('#fx').append(im);
+  });
+}
+const HALL_LINES = {
+  1: [
+    ['byte', 'Перше ядро на місці — бачите, як воно світиться? Архів трохи ожив!'],
+    ['murko', 'Наступна зупинка — <i>Середньовіччя</i>, XI століття. Натисніть на світлу точку!', {emo:'murko_happy'}]
+  ],
+  2: [
+    ['byte', 'Два ядра вже світяться! Бачите — екран мерехтить менше. Архів оживає!'],
+    ['murko', 'Далі — <i>Відродження і великі відкриття</i>, XV–XVI століття. Натисніть на світлу точку!', {emo:'murko_happy'}]
+  ],
+  3: [
+    ['byte', 'Три ядра на місці! Купол Архіву майже не мерехтить.'],
+    ['murko', 'Далі — <i>Доба винаходів</i>: паровози, електрика, телефон! Натисніть на світлу точку!', {emo:'murko_happy'}]
+  ],
+  4: [
+    ['byte', 'Чотири ядра! Залишилося одне — і воно сховалося тут, у самому Архіві.'],
+    ['murko', 'Тоді останній крок — <i>Архів 3027</i>! Натисніть на світлу точку!', {emo:'murko_happy'}]
+  ]
+};
+async function hallReturn(){
+  setBg('hall'); clearFx(); hud(true); buildHud();
+  const n = state.cores.filter(Boolean).length;
+  if(n < 5) glitchRegion('hall', 730, 360, 470, 225);
+  show('murko', {img:'murko_happy', x:400, y:890, h:400, from:400});
+  show('byte', {x:1520, y:895, h:390, from:1520});
+  await sleep(700);
+  placeCores();
+  await sleep(600);
+  const lines = HALL_LINES[n] || [['murko', 'Натисніть на світлу точку на карті!', {emo:'murko_happy'}]];
+  await say(...lines[0]);
+  await timeMap(lines.slice(1));
+}
+
+/* ================== спільне: нагорода, фрагмент, голограма ================== */
+async function giveCore(i, who, text){
+  const r = $('#reward');
+  r.innerHTML = `<div class="rays"></div><img class="coreBig" src="${IMG[CORES[i]]}" alt="">`;
+  await say(who, text);
+  hideDialog();
+  state.cores[i] = true;
+  hud(true); buildHud();
+  const slot = $('#hud').querySelectorAll('.slot')[i];
+  slot.classList.remove('have');
+  const big = r.querySelector('.coreBig'), hudEl = $('#hud');
+  big.style.left = (hudEl.offsetLeft + slot.offsetLeft + slot.offsetWidth / 2) + 'px';
+  big.style.top = (hudEl.offsetTop + slot.offsetTop + slot.offsetHeight / 2) + 'px';
+  big.style.height = '58px'; r.querySelector('.rays').style.opacity = 0;
+  await sleep(1150);
+  slot.classList.add('have'); r.innerHTML = '';
+}
+async function fragment(n, text){
+  const f = document.createElement('div'); f.className = 'frag';
+  f.innerHTML = `<div class="ft">Відновлений фрагмент Архіву №${n}</div><p>${text}</p>`;
+  stage.append(f); cancels.add(() => f.remove());
+  await say('byte', 'Ядро відновило шматочок Архіву! Прочитаймо його.');
+  f.remove();
+}
+async function hologram(stageN, opt = {}){
+  const g = document.createElement('div'); g.className = 'ghost s' + stageN;
+  if(opt.left !== undefined){ g.style.right = 'auto'; g.style.left = opt.left + 'px'; }
+  if(opt.top !== undefined) g.style.top = opt.top + 'px';
+  g.innerHTML = `<img src="${IMG.murko_old}" alt="">`;
+  stage.append(g); void g.offsetWidth; g.classList.add('run');
+  let w = null;
+  if(opt.whisper){ w = document.createElement('div'); w.className = 'whisper'; w.textContent = opt.whisper; w.style.left = (opt.wx ?? 860) + 'px'; w.style.top = (opt.wy ?? 120) + 'px'; stage.append(w); }
+  await sleep(2300); g.remove(); w && w.remove();
+}
+function panel(tag, title, bonus){
+  const box = $('#taskBox');
+  box.innerHTML = `<div class="dim"></div><div class="panel"><div class="tag${bonus ? ' bonus' : ''}">${tag}</div><h2>${title}</h2></div>`;
+  box.classList.add('on'); return box.querySelector('.panel');
+}
+function closePanel(){ const b = $('#taskBox'); b.classList.remove('on'); b.innerHTML = ''; }
+function chooseAny(labels){
+  return cancellable(res => {
+    choicesEl.innerHTML = ''; nextBtn.hidden = true;
+    labels.forEach(l => { const b = document.createElement('button'); b.className = 'ch'; b.textContent = l; b.onclick = () => res(l); choicesEl.append(b); });
+  });
+}
+
+/* ================== ЕПОХА 1. Давній світ ================== */
+async function era1(){
+  setBg('era1'); clearFx(); hud(true); buildHud();
+  show('murko', {img:'murko_surprised', x:430, y:890, h:390, from:430});
+  show('byte', {x:760, y:895, h:340, from:760});
+  await sleep(800);
+  await say('murko', 'Скільки сувоїв! І маяк над морем… Де це ми?', {emo:'murko_surprised'});
+  await say('byte', 'Це <i>Олександрійська бібліотека</i> у Стародавньому Єгипті, III століття до нашої ери. Сюди звозили знання з усього світу!');
+  show('hypatia', {x:1460, y:905, h:470, from:1460});
+  await sleep(700);
+  await say('hypatia', 'Вітаю, мандрівники! Я — Гіпатія, хранителька бібліотеки. Вітер часу зіпсував мої сувої: числа на них розмилися.');
+  await say('hypatia', 'Відновіть їх — і <i>Ядро мудрості</i> ваше.');
+  await romanTask();
+  await say('hypatia', 'Чудово! Римські цифри живуть і досі: на годинниках, у номерах століть і розділів книжок.');
+  await cipherTask();
+  await say('murko', 'МУДРІСТЬ! Пароль — мудрість!', {emo:'murko_happy'});
+  await say('hypatia', 'Саме так. Схожим шифром користувався римський полководець <i>Юлій Цезар</i>: він зсував літери на три кроки, щоб вороги не прочитали його листів.');
+  await say('hypatia', 'Ви заслужили ядро! Але якщо маєте ще хвилинку — ось моя улюблена головоломка.', {noNext:true});
+  const pick = await chooseAny(['Розв’язати головоломку', 'Пропустити']);
+  if(pick !== 'Пропустити') await matchTask();
+  await giveCore(0, 'hypatia', 'Тримайте <i>Ядро мудрості</i>. Нехай воно знову світить Архіву!');
+  emo('murko', 'murko_happy');
+  await fragment(1, 'В Олександрійській бібліотеці у Стародавньому Єгипті книги були не сторінками, а довгими <b>сувоями папірусу</b>. Учені приїжджали туди з різних країн, щоб читати й переписувати їх.');
+  hideDialog();
+  await sleep(400);
+  await hologram(1, {left:150, top:150});
+  await say('murko', 'Ой! Ви бачили? У кутку щось промайнуло… Схоже на тінь кота!', {emo:'murko_surprised'});
+  await say('byte', 'Мабуть, перешкоди від порталу. Повертаймося до Архіву — встановимо ядро!');
+  hideDialog();
+  await fadeTo(() => { clearActors(); clearFx(); run(hallReturn); });
+}
+
+/* ---- 1.1 римські числа ---- */
+const ROMAN = [['IX', 9, 'I стоїть перед X — віднімаємо: 10 − 1.'], ['XIV', 14, 'X + IV: 10 + 4.'], ['XXVI', 26, 'X + X + V + I: 10 + 10 + 5 + 1.'], ['XL', 40, 'X стоїть перед L — віднімаємо: 50 − 10.']];
+function shuffle(a){ a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+async function romanTask(){
+  const p = panel('Математика', 'Римські числа на сувоях');
+  p.insertAdjacentHTML('beforeend', '<svg class="lines"></svg><div class="rule" style="top:110px">Натисніть на римське число, а потім — на його значення.</div>');
+  const svg = p.querySelector('svg.lines');
+  const nums = shuffle(ROMAN.map(r => r[1]));
+  const L = [], R = [];
+  ROMAN.forEach((r, i) => { const c = document.createElement('div'); c.className = 'card roman'; c.textContent = r[0]; c.style.left = '300px'; c.style.top = (190 + i * 140) + 'px'; p.append(c); L.push(c); });
+  nums.forEach((n, i) => { const c = document.createElement('div'); c.className = 'card'; c.textContent = n; c.style.left = '850px'; c.style.top = (190 + i * 140) + 'px'; c.dataset.v = n; p.append(c); R.push(c); });
+  await say('hypatia', 'Розмиті римські числа треба з’єднати з їхніми значеннями. Пам’ятайте: <i>I = 1, V = 5, X = 10, L = 50</i>.', {noNext:true});
+  await cancellable(res => {
+    let sel = null, done = 0;
+    L.forEach((c, i) => c.onclick = () => { if(c.classList.contains('right')) return; L.forEach(x => x.classList.remove('sel')); c.classList.add('sel'); sel = i; });
+    R.forEach(c => c.onclick = () => {
+      if(c.classList.contains('right')) return;
+      if(sel === null){ textEl.innerHTML = 'Спочатку натисніть на <i>римське число</i> зліва.'; return; }
+      const r = ROMAN[sel];
+      if(+c.dataset.v === r[1]){
+        L[sel].classList.remove('sel'); L[sel].classList.add('right'); c.classList.remove('wrong'); c.classList.add('right');
+        const y1 = 190 + sel * 140 + 56, y2 = parseInt(c.style.top) + 56;
+        svg.insertAdjacentHTML('beforeend', `<line x1="550" y1="${y1}" x2="850" y2="${y2}" stroke="#2f9e44" stroke-width="7" stroke-linecap="round"/>`);
+        textEl.innerHTML = `Так! <i>${r[0]} = ${r[1]}</i>. ${r[2]}`;
+        sel = null; done++;
+        if(done === ROMAN.length) setTimeout(res, 1300);
+      } else {
+        c.classList.remove('wrong'); void c.offsetWidth; c.classList.add('wrong'); setTimeout(() => c.classList.remove('wrong'), 700);
+        textEl.innerHTML = `Не ${c.dataset.v}… Підказка: ${r[2]}`;
+      }
+    });
+  });
+  closePanel();
+}
+
+/* ---- 1.2 шифр Цезаря ---- */
+const ABC = 'АБВГҐДЕЄЖЗИІЇЙКЛМНОПРСТУФХЦЧШЩЬЮЯ'.split('');
+async function cipherTask(){
+  const word = 'МУДРІСТЬ'.split('');
+  const enc = word.map(ch => ABC[(ABC.indexOf(ch) + 1) % ABC.length]);
+  const p = panel('Інформатика · кодування', 'Шифр Гіпатії');
+  const W = 112, G = 22, total = word.length * W + (word.length - 1) * G, x0 = (1400 - total) / 2;
+  let html = '<div class="rule" style="top:100px">Кожну літеру замінено <b>наступною</b> в абетці. Щоб розшифрувати — беремо <b>попередню</b>.</div>';
+  enc.forEach((ch, i) => { html += `<div class="ctile" style="left:${x0 + i * (W + G)}px;top:165px">${ch}</div><div class="cslot" data-i="${i}" style="left:${x0 + i * (W + G)}px;top:345px"></div>`; });
+  html += `<div class="carrow" style="left:${x0 - 92}px;top:290px">↓ крок<br>назад</div>`;
+  html += '<div class="kb" style="top:520px"></div><div class="kb" style="top:612px"></div>';
+  p.insertAdjacentHTML('beforeend', html);
+  p.querySelector('.carrow').style.cssText += ';font-size:28px;line-height:1.1;text-align:center';
+  const rows = p.querySelectorAll('.kb');
+  ABC.forEach((ch, i) => { const k = document.createElement('button'); k.className = 'key'; k.textContent = ch; k.dataset.ch = ch; rows[i < 17 ? 0 : 1].append(k); });
+  const slots = [...p.querySelectorAll('.cslot')];
+  await say('hypatia', 'Я зашифрувала пароль до сховища. Розшифруйте його! Натискайте літери на клавіатурі — по одній для кожної клітинки.', {noNext:true});
+  await cancellable(res => {
+    let cur = 0, miss = 0; slots[0].classList.add('act');
+    p.querySelectorAll('.key').forEach(k => k.onclick = () => {
+      if(cur >= word.length) return;
+      const s = slots[cur]; s.textContent = k.dataset.ch;
+      if(k.dataset.ch === word[cur]){
+        s.className = 'cslot ok'; p.querySelectorAll('.key.hint').forEach(x => x.classList.remove('hint'));
+        miss = 0; cur++;
+        if(cur < word.length){ slots[cur].classList.add('act'); textEl.innerHTML = `Так! ${enc[cur - 1]} → <i>${word[cur - 1]}</i>. Наступна літера: <i>${enc[cur]}</i>.`; }
+        else { textEl.innerHTML = 'Пароль розшифровано!'; setTimeout(res, 1200); }
+      } else {
+        s.className = 'cslot act bad'; miss++;
+        const e = enc[cur];
+        textEl.innerHTML = `Не ${k.dataset.ch}… Знайдіть у абетці літеру <i>${e}</i> і візьміть ту, що стоїть <i>перед нею</i>.`;
+        if(miss >= 2) p.querySelectorAll('.key').forEach(x => x.classList.toggle('hint', x.dataset.ch === e));
+        setTimeout(() => { if(slots[cur] === s && !s.classList.contains('ok')){ s.textContent = ''; s.className = 'cslot act'; } }, 800);
+      }
+    });
+  });
+  closePanel();
+}
+
+/* ---- 1.3 сірникова головоломка ---- */
+const RX = /^(X{0,3})(IX|IV|V?I{0,3})$/;
+function romanVal(r){ if(!r || !RX.test(r)) return null; const v = {I:1, V:5, X:10}; let t = 0; for(let i = 0; i < r.length; i++){ const a = v[r[i]], b = v[r[i + 1]] || 0; t += a < b ? -a : a; } return t; }
+async function matchTask(){
+  const start = {nums:['VI', 'II', 'II'], op:'-'};
+  const p = panel('Головоломка · бонус', 'Перекладіть одну паличку', true);
+  p.insertAdjacentHTML('beforeend', '<div class="rule" style="top:110px">Рівність неправильна. Натисніть на паличку, а потім — на нове місце.</div><svg class="sticks" viewBox="0 0 1400 520" style="position:absolute;left:0;top:190px;width:1400px;height:520px"></svg>');
+  const svg = p.querySelector('svg.sticks');
+  let st = {nums:start.nums.slice(), op:start.op}, held = null;
+  const stickSVG = (x1, y1, x2, y2, cls = '', data = '') =>
+    `<g class="${cls}" ${data}><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6b4214" stroke-width="22" stroke-linecap="round"/><line class="wood" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ecc77e" stroke-width="13" stroke-linecap="round"/><circle cx="${x1}" cy="${y1}" r="14" fill="#c0392b" stroke="#6b1a10" stroke-width="3"/></g>`;
+  const ghostSVG = (x, data) => `<g class="ghostS" ${data}><line x1="${x}" y1="120" x2="${x}" y2="300"/><rect x="${x - 26}" y="110" width="52" height="200" fill="transparent"/></g>`;
+  function render(){
+    // спочатку рахуємо ширину
+    const items = [];
+    const pushNum = k => {
+      if(held) items.push({g:'ghost', k, at:0});
+      st.nums[k].split('').forEach((ch, ci) => items.push({g:ch, k, ci}));
+      if(held) items.push({g:'ghost', k, at:st.nums[k].length});
+    };
+    pushNum(0); items.push({g:'op'}); pushNum(1); items.push({g:'eq'}); pushNum(2);
+    const wOf = it => it.g === 'I' ? 54 : it.g === 'V' ? 124 : it.g === 'X' ? 124 : it.g === 'ghost' ? 60 : 190;
+    const total = items.reduce((a, it) => a + wOf(it), 0); let x = (1400 - total) / 2;
+    let out = '';
+    items.forEach(it => {
+      const w = wOf(it), cx = x + w / 2;
+      if(it.g === 'I') out += stickSVG(cx, 120, cx, 300, 'st', `data-k="${it.k}" data-ci="${it.ci}"`);
+      if(it.g === 'V') out += stickSVG(cx - 46, 120, cx, 300) + stickSVG(cx + 46, 120, cx, 300);
+      if(it.g === 'X') out += stickSVG(cx - 46, 120, cx + 46, 300) + stickSVG(cx + 46, 120, cx - 46, 300);
+      if(it.g === 'ghost') out += ghostSVG(cx, `data-k="${it.k}" data-at="${it.at}"`);
+      if(it.g === 'op'){
+        out += stickSVG(cx - 60, 210, cx + 60, 210);
+        if(st.op === '+') out += stickSVG(cx, 150, cx, 270);
+        else if(held) out += `<g class="ghostS" data-op="1"><line x1="${cx}" y1="150" x2="${cx}" y2="270"/><rect x="${cx - 30}" y="140" width="60" height="140" fill="transparent"/></g>`;
+      }
+      if(it.g === 'eq') out += stickSVG(cx - 60, 180, cx + 60, 180) + stickSVG(cx - 60, 245, cx + 60, 245);
+      x += w;
+    });
+    if(held) out += `<g class="ghostS" data-back="1"><text x="1250" y="40" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="26" fill="#7b4fa8">паличка в руці</text>${stickSVG(1180, 80, 1320, 80)}<rect x="1150" y="50" width="200" height="60" fill="transparent"/></g>`;
+    svg.innerHTML = out;
+  }
+  render();
+  await say('hypatia', 'На табличці паличками викладено <i>VI − II = II</i>. Але 6 − 2 не дорівнює 2! Перекладіть <i>одну</i> паличку, щоб рівність стала правильною.', {noNext:true});
+  await cancellable(res => {
+    svg.onclick = e => {
+      const g = e.target.closest('g'); if(!g) return;
+      if(!held && g.classList.contains('st')){
+        const k = +g.dataset.k, ci = +g.dataset.ci;
+        held = {k, ci}; const a = st.nums[k];
+        st.nums[k] = a.slice(0, ci) + a.slice(ci + 1);
+        render(); textEl.innerHTML = 'Паличку взято! Тепер натисніть на одне з <i>пунктирних місць</i>. Передумали — натисніть «паличка в руці».'; return;
+      }
+      if(held && g.dataset.back){ const {k, ci} = held; st.nums[k] = st.nums[k].slice(0, ci) + 'I' + st.nums[k].slice(ci); held = null; render(); textEl.innerHTML = 'Паличку повернуто. Оберіть іншу.'; return; }
+      if(held && g.classList.contains('ghostS')){
+        if(g.dataset.op) st.op = '+';
+        else { const k = +g.dataset.k, at = +g.dataset.at; st.nums[k] = st.nums[k].slice(0, at) + 'I' + st.nums[k].slice(at); }
+        held = null; render();
+        const [a, b, c] = st.nums.map(romanVal), shown = `${st.nums[0]} ${st.op === '+' ? '+' : '−'} ${st.nums[1]} = ${st.nums[2]}`;
+        if(a === null || b === null || c === null){
+          textEl.innerHTML = `Вийшло <i>${shown}</i> — але такого римського числа не буває. Спробуймо ще раз!`;
+        } else if((st.op === '+' ? a + b : a - b) === c){
+          textEl.innerHTML = `Правильно! <i>${shown}</i>, бо ${a} ${st.op === '+' ? '+' : '−'} ${b} = ${c}.`;
+          setTimeout(() => res(shown), 1800); return;
+        } else {
+          textEl.innerHTML = `Вийшло <i>${shown}</i>, тобто ${a} ${st.op === '+' ? '+' : '−'} ${b} = ${c}? Ні, неправда. Спробуймо ще раз!`;
+        }
+        setTimeout(() => { st = {nums:start.nums.slice(), op:start.op}; render(); }, 2600);
+      }
+    };
+  });
+  closePanel();
+  await say('hypatia', 'Молодці! До речі, цю головоломку можна розв’язати <i>кількома способами</i>. Спробуйте вдома знайти інші!');
+}
+
+
+/* ================== ЕПОХА 2. Середньовіччя ================== */
+async function era2(){
+  setBg('era2'); clearFx(); hud(true); buildHud();
+  show('murko', {img:'murko_surprised', x:430, y:895, h:390, from:430});
+  show('byte', {x:760, y:900, h:340, from:760});
+  await sleep(800);
+  await say('murko', 'Які золоті бані за вікном! А скільки свічок, пер і книжок…', {emo:'murko_surprised'});
+  await say('byte', 'Ми в <i>Києві, XI століття</i> — часи Київської Русі. Тут, біля Софійського собору, переписують книги для бібліотеки князя Ярослава Мудрого.');
+  show('nestor', {x:1470, y:915, h:480, from:1470});
+  await sleep(700);
+  await say('nestor', 'Вітаю, гості! Я — Нестор, літописець. Я переписував літопис, але глітч часу наробив у ньому помилок!');
+  await say('nestor', 'Справжній майстер пише бездоганно. Допоможете виправити — отримаєте <i>Ядро майстерності</i>.');
+  await manuscriptTask();
+  await say('nestor', 'Тепер рукопис чистий! Тоді писали гусячим пером і чорнилом, тож виправити помилку було дуже складно.');
+  await bukvytsiTask();
+  await say('nestor', 'Ядро ваше! А для найкмітливіших — загадка про майстрів нашого міста.', {noNext:true});
+  const pick = await chooseAny(['Розгадати загадку', 'Пропустити']);
+  if(pick !== 'Пропустити') await mastersTask();
+  await giveCore(1, 'nestor', 'Тримайте <i>Ядро майстерності</i>! Хай воно нагадує: кожна справа потребує старанності.');
+  emo('murko', 'murko_happy');
+  await fragment(2, 'У XI столітті князь <b>Ярослав Мудрий</b> заснував у Києві одну з перших бібліотек Русі. Кожну книгу тоді переписували вручну, і це могло тривати <b>місяцями</b>.');
+  hideDialog();
+  await sleep(400);
+  await hologram(2, {left:790, top:150, whisper:'…продовжуй…', wx:1120, wy:170});
+  await say('murko', 'Знову ця тінь! Тепер видно вуха і хвіст… І вона прошепотіла: «продовжуй»!', {emo:'murko_surprised'});
+  await say('byte', 'Дивно… Сигнал іде звідкись із дуже далекого майбутнього. Але зараз — до Архіву, встановимо ядро!');
+  hideDialog();
+  await fadeTo(() => { clearActors(); clearFx(); run(hallReturn); });
+}
+
+/* ---- 2.1 зіпсований рукопис ---- */
+const MS = [
+  {t:'у', fix:'У', why:'Речення починається з великої літери.'},
+  {t:' '}, {t:'києві', fix:'Києві', why:'Назви міст пишемо з великої літери.'},
+  {t:' '}, {t:'жив'}, {t:' '}, {t:'князь'}, {t:' '}, {t:'Ярослав'}, {t:' '},
+  {t:'мудрий', fix:'Мудрий', why:'Прізвисько князя — частина імені, тому з великої літери.'}, {t:'. '},
+  {t:'Він'}, {t:' '}, {t:'дуже'}, {t:' '}, {t:'любив'}, {t:' '},
+  {t:'книшки', fix:'книжки', why:'Перевіряємо: книжечка — чуємо [ж].'}, {t:'. '},
+  {t:'Князь'}, {t:' '}, {t:'зібрав'}, {t:' '}, {t:'багато'}, {t:' '},
+  {t:'рукописсів', fix:'рукописів', why:'Перевіряємо: рукопис — одна літера с.'}, {t:' '},
+  {t:'і'}, {t:' '}, {t:'заснував'}, {t:' '}, {t:'бібліотеку'}, {t:' '}, {t:'при'}, {t:' '}, {t:'Софійському'}, {t:' '}, {t:'соборі'}, {t:'.'}
+];
+async function manuscriptTask(){
+  const p = panel('Українська мова', 'Зіпсований літопис');
+  const total = MS.filter(m => m.fix).length;
+  let html = '<div class="counter">Виправлено: <span>0</span> з ' + total + '</div><div class="manuscript">';
+  MS.forEach((m, i) => { html += m.t.trim() ? `<span class="w" data-i="${i}">${m.t}</span>` : m.t; });
+  p.insertAdjacentHTML('beforeend', html + '</div>');
+  const ms = p.querySelector('.manuscript'), cnt = p.querySelector('.counter span');
+  await say('nestor', 'У тексті <i>5 помилок</i>. Натискайте на слово, у якому помилка, — і обирайте, як правильно.', {noNext:true});
+  let found = 0;
+  while(found < total){
+    const w = await cancellable(res => { ms.onclick = e => { const x = e.target.closest('.w'); if(x && !x.classList.contains('fixed')) res(x); }; });
+    ms.onclick = null;
+    const m = MS[+w.dataset.i];
+    if(!m.fix){
+      w.classList.remove('no'); void w.offsetWidth; w.classList.add('no'); setTimeout(() => w.classList.remove('no'), 700);
+      textEl.innerHTML = `У слові «${m.t}» помилки немає. Шукайте далі!`; continue;
+    }
+    w.classList.add('cur');
+    await say('nestor', `Як правильно написати?`, {noNext:true});
+    await choose(shuffle([m.fix, m.t]), m.fix, () => { textEl.innerHTML = 'Ні, так і було з помилкою. Подумайте ще!'; });
+    w.textContent = m.fix; w.className = 'w fixed'; found++; cnt.textContent = found;
+    choicesEl.innerHTML = ''; textEl.innerHTML = `Так! <i>${m.fix}</i>. ${m.why}` + (found < total ? ' Шукайте далі!' : ''); talk('nestor');
+    if(found === total) await sleep(2200);
+  }
+  closePanel();
+}
+
+/* ---- 2.2 буквиці ---- */
+async function bukvytsiTask(){
+  const word = 'ЛІТОПИС'.split(''), letters = ['С', 'О', 'Т', 'Л', 'И', 'П', 'І'];
+  const p = panel('Українська мова', 'Буквиці з рукопису');
+  const W = 112, G = 20, x0 = (1400 - (word.length * W + (word.length - 1) * G)) / 2;
+  const pool = [[170, 470], [340, 570], [510, 470], [680, 570], [850, 470], [1020, 570], [1170, 470]];
+  p.insertAdjacentHTML('beforeend', '<div class="rule" style="top:110px">Натискайте на буквиці, щоб скласти слово. Натисніть на клітинку — і буквиця повернеться.</div>');
+  const slots = word.map((_, i) => { const d = document.createElement('div'); d.className = 'bslot'; d.style.left = (x0 + i * (W + G)) + 'px'; d.style.top = '230px'; p.append(d); return d; });
+  const tiles = letters.map((ch, i) => { const d = document.createElement('div'); d.className = 'bq'; d.textContent = ch; d.dataset.i = i; p.append(d); return d; });
+  let place = Array(word.length).fill(null), locked = 0;
+  const homeOf = i => pool[i];
+  function layout(){
+    tiles.forEach((t, i) => {
+      const si = place.indexOf(i);
+      if(si >= 0){ t.style.left = (x0 + si * (W + G)) + 'px'; t.style.top = '230px'; t.style.transform = 'none'; }
+      else { const [x, y] = homeOf(i); t.style.left = x + 'px'; t.style.top = y + 'px'; t.style.transform = `rotate(${(i % 2 ? 1 : -1) * (4 + i)}deg)`; }
+    });
+    slots.forEach((s, i) => s.className = 'bslot' + (i < locked ? ' ok' : ''));
+  }
+  layout();
+  await say('nestor', 'Ой, з рукопису випали розмальовані великі літери — <i>буквиці</i>. Складіть із них назву книги, яку я пишу!', {noNext:true});
+  await cancellable(res => {
+    p.onclick = e => {
+      const t = e.target.closest('.bq');
+      if(!t) return;
+      const i = +t.dataset.i, si = place.indexOf(i);
+      if(si >= 0){ if(si < locked) return; place[si] = null; layout(); return; }
+      const free = place.indexOf(null); if(free < 0) return;
+      place[free] = i; layout();
+      if(place.indexOf(null) < 0){
+        const got = place.map(k => letters[k]).join('');
+        if(got === word.join('')){ slots.forEach(s => s.className = 'bslot ok'); textEl.innerHTML = 'Вийшло слово <i>ЛІТОПИС</i>!'; p.onclick = null; setTimeout(res, 1300); }
+        else {
+          slots.forEach((s, k) => { if(k >= locked) s.className = 'bslot bad'; });
+          textEl.innerHTML = `«${got}» — такого слова немає. Підказка: слово починається на <i>${word.slice(0, locked + 1).join('')}</i>…`;
+          setTimeout(() => {
+            place = place.map((k, idx) => idx < locked ? k : null);
+            const need = word[locked], ti = letters.findIndex((ch, idx) => ch === need && !place.includes(idx));
+            place[locked] = ti; locked++; layout();
+          }, 1000);
+        }
+      }
+    };
+  });
+  closePanel();
+  await say('murko', 'ЛІТОПИС! А що це таке?', {emo:'murko_thinking'});
+  await say('nestor', 'Гарне питання, Мурко! Друзі, допоможіть йому — подумайте, що ж таке <i>літопис</i>.');
+  await say('nestor', 'Оберіть правильну відповідь:', {noNext:true});
+  await choose(shuffle(['Записи подій рік за роком', 'Збірка казок про богатирів', 'Книга з малюнками для дітей']), 'Записи подій рік за роком', () => { textEl.innerHTML = 'Не зовсім… Підказка: у слові «літопис» сховалося слово «літо».'; });
+  await say('nestor', 'Саме так! Колись слово <i>«літо»</i> означало <i>«рік»</i>. Тому літопис — це записи про події рік за роком.');
+}
+
+/* ---- 2.3 хто який майстер ---- */
+async function mastersTask(){
+  const NAMES3 = ['Остап', 'Марко', 'Іван'], PROF = ['гончар', 'коваль', 'писар'], ANS = {'Остап':'писар', 'Марко':'гончар', 'Іван':'коваль'};
+  const p = panel('Логіка · бонус', 'Хто який майстер?', true);
+  p.insertAdjacentHTML('beforeend', `<div class="clues">Троє майстрів — Остап, Марко й Іван. Один — <b>гончар</b> (ліпить із глини), другий — <b>коваль</b> (кує метал), третій — <b>писар</b>.<br>• Остап не працює ні з глиною, ні з металом.<br>• Марко — не коваль.</div>`);
+  const pickd = {};
+  NAMES3.forEach((n, r) => {
+    const row = document.createElement('div'); row.className = 'mrow'; row.style.top = (350 + r * 94) + 'px';
+    row.innerHTML = `<div class="who">${n}</div>` + PROF.map(pr => `<button class="ch" data-n="${n}" data-p="${pr}">${pr}</button>`).join('');
+    p.append(row);
+  });
+  const btn = document.createElement('button'); btn.className = 'pbtn'; btn.textContent = 'Перевірити'; btn.style.top = '668px'; btn.style.padding = '12px 46px'; p.append(btn);
+  await say('nestor', 'Прочитайте підказки й оберіть для кожного майстра його ремесло.', {noNext:true});
+  await cancellable(res => {
+    p.onclick = e => {
+      const b = e.target.closest('.mrow .ch');
+      if(b){ pickd[b.dataset.n] = b.dataset.p; p.querySelectorAll(`.mrow .ch[data-n="${b.dataset.n}"]`).forEach(x => x.classList.toggle('on', x === b)); p.querySelectorAll('.mrow .ch').forEach(x => x.classList.remove('right', 'wrong')); return; }
+      if(e.target === btn){
+        if(Object.keys(pickd).length < 3){ textEl.innerHTML = 'Оберіть ремесло для <i>кожного</i> майстра.'; return; }
+        let ok = true;
+        NAMES3.forEach(n => { const el = p.querySelector(`.mrow .ch[data-n="${n}"][data-p="${pickd[n]}"]`); const good = pickd[n] === ANS[n]; el.classList.add(good ? 'right' : 'wrong'); ok = ok && good; });
+        if(ok){ textEl.innerHTML = 'Правильно! Остап — писар, Марко — гончар, Іван — коваль.'; p.onclick = null; setTimeout(res, 1800); }
+        else if(pickd['Остап'] !== 'писар') textEl.innerHTML = 'Почніть з Остапа: він не працює ні з глиною, ні з металом. Хто ж він?';
+        else textEl.innerHTML = 'Остап — писар, це вірно! Тепер Марко: він не коваль, а писарем уже є Остап…';
+      }
+    };
+  });
+  closePanel();
+  await say('nestor', 'Молодці! Так міркують справжні детективи: відкидаємо зайве — і лишається правильна відповідь.');
+}
+
+
+/* ================== ЕПОХА 3. Відродження і відкриття ================== */
+const WMAP = {"W": 1160, "H": 560, "land": "M463,535.8L463.2,537L463.3,538L459.1,537.7L454.8,537.8L451.8,537.1L451.7,537L450.2,536.3L454.6,536.4L459,536.6L459.8,535.6L460.3,534.8ZM265.1,534.5L261.8,534.8L257.8,534L255.2,533.1L254.9,532.9L252.5,532.3L252.3,531.3L256.6,531.7L259.8,532.5L262.7,533.4ZM489.1,530.9L492,532L493.5,533.5L494.2,534.5L494.9,535.7L492.2,536.5L489.3,537.1L485.9,537.6L482.1,538.1L477.5,537.9L474.4,537.2L474.2,536.2L478,535.6L479.3,534.8L480,533.7L480.4,532.8L481.2,531.9L482,530.9L483,530.9L485.8,530.4ZM323.6,519L326.8,519.4L328.8,518.9L328.5,519.9L327.2,520.6L324.1,520.4L321.1,519.4L320.6,518.5ZM314.4,518.9L318.7,520L317.3,519.9L314.3,519.6L310.7,518.9L311.6,518.3ZM367.4,514.7L370,515.1L372.1,514.7L374.5,516.3L372.7,516.1L370.2,516.2L367.5,516.1L364.7,516.3L362.1,515.7L360.1,514.6L361.1,514.1L364.1,514.5ZM431.6,512L432.5,513.2L432.6,514.3L432.6,515.3L430.3,515.7L428.2,516.3L425.3,516.2L425.8,515.1L423.5,515.5L421.3,515.9L419.2,515.1L418.4,513.9L420.2,512.8L421.5,512.5L424.1,512.6L424,511.2L423.5,510.1L422.3,507.9L422.9,506.5L424.7,506.1L426.4,507.1L427.4,508.2L429,509.5L430.4,510.7ZM251,545.7L251,545.7L251,545.7L251.1,545.7L249.3,544.6L254.5,545.2L254.5,545.1L254.5,545L254.5,544.8L254.5,544.6L254.6,544.5L254.8,544.5L255.1,544.6L260.2,545.3L260.2,544.6L260.2,544.5L264.7,544.1L267.8,544.6L269.3,544.8L273.9,545.4L280.5,545.9L286.4,546.4L294.7,546.8L298.4,546.4L307.2,546.7L313.2,547.2L316.4,546.7L320,546.2L318.1,545.4L310.7,545.3L303.6,544.9L300.2,544.2L294.1,543.7L292.3,542.8L291.1,542L290.1,541.2L288,540.3L283.6,539.7L280.6,538.9L276.3,538.2L281.2,538.4L285.1,538L289.2,538.8L291.5,538.1L293.2,537.3L293.5,536.5L291.3,535.5L287.7,534.9L283.7,534.1L279.4,534L275.3,533.7L271.1,533.4L268.4,532.5L264.6,531.7L261.7,530.9L256.9,528L258.2,528.2L261.2,529L264.2,528.8L266.9,528.4L270.1,529.5L273,529.3L274.9,528.7L276.6,528L277.7,527.2L280.5,526.9L279.2,525.9L277.3,525L276.7,524L278.8,523.6L281.1,524.4L283.7,523.9L285.3,523.2L288.2,523.2L290.7,522.9L292.8,522.3L294.4,521.7L296.3,521.2L298.2,521.3L299.8,521.5L302.5,521.2L305.8,521.6L308.7,521.6L311,521.2L314.1,521.5L317.5,521.7L320.3,521.6L323.4,521.7L326.6,521.7L329.3,521.6L330.7,520.8L332.9,520.4L336,521L338.1,520.5L339.5,519.6L341.6,520.4L343.2,521.4L345.4,522.3L346.9,521.5L350.3,522.5L353.4,522.8L356.4,523.5L359.2,523.4L361.5,522.9L364.7,523L367.8,523.4L371.1,523.8L371.2,522.7L369.1,521.8L367.3,520.8L364.4,520.6L362.4,519.6L361.1,518.6L358.8,516.6L360.7,516.9L363.6,517.1L366.2,516.9L369.1,517.4L371.9,518.2L373.5,519.1L376.5,519.3L378.9,518.9L381.4,518.4L383.8,518.1L386.4,518.7L389.1,518.5L389.5,516.4L392.1,517.6L394.8,518.1L397.3,517.9L399.8,518.9L402.6,519L405.4,519.4L408.3,519.9L409.3,518.9L409.5,518L412.3,519L415.1,518.8L417.6,519.4L419.5,520.3L422.2,520L424,519.4L425.8,518.7L428.2,518.3L431,518L433.5,517.6L435.3,517.1L436.1,516.2L436,515L435.1,513.9L433.9,512.8L432.6,511.7L431.4,510.6L430.3,509.6L429.7,508.5L429.3,507.4L429.8,506.3L430.2,505.1L430,504L429,502.7L428.2,501.6L428.7,500.3L429.5,499.5L430.5,498.4L431.7,497.4L433.1,496.6L433.5,495.3L434.4,494.5L435.5,493.7L437.7,493.6L438.7,492.6L440.1,492.1L441.9,491.7L443.3,491L444.2,490L445.9,489.7L447.6,490.4L447.1,491.4L445,492.3L444.3,492.9L442.4,492.5L440.6,492.8L439.3,493.5L437.9,494.2L437.2,495.1L437.3,496.2L437.9,497.3L439.4,498.3L438.1,499L436.1,499.2L435.3,500.2L434.4,501.1L433.5,502.4L433.6,503.4L435,504.6L436.5,505.5L438.7,506.2L440.8,507.1L442.2,508.2L443.1,509.2L444.2,510.4L445.7,511.3L446.8,512.3L448.3,514.9L449.4,515.9L450,517L451.2,518.1L451.6,519.5L451,520.6L450.2,521.5L447.6,521.9L447.1,522.8L446.3,523.7L443.8,524.7L441.2,525.1L439,525.7L436.5,526.2L435.5,527.3L432.3,527.4L428.6,527.3L425.5,527.5L422.1,527.5L423.4,528.5L426.8,529L429.6,529.7L431.5,530.6L429.8,531.3L426.1,531.1L423.7,531.7L424.4,532.8L425,533.7L428,534.5L429.2,535.4L432.4,536.3L436.8,536.7L440.9,537.3L444.2,538L448.4,538.7L453.4,539.1L458.6,539.7L462.4,540.3L466.5,541L469.2,542L470.8,542.8L472.5,542.1L475.1,541.5L477.9,540.8L481.5,540.2L484.5,539.6L489.2,539.6L494.1,539.9L498.3,540.4L499,539.5L501.3,538.8L506.2,538.8L509.8,538.3L513.2,537.8L517.1,537.5L521.3,537.1L524.1,536.5L522.5,535.6L521.4,534.8L521.1,533.9L517.3,534L513.3,534.4L509.5,534.4L508.6,533.5L508.2,531.6L508.9,531.1L511.6,530.5L514.8,529.9L517.1,529.2L519.3,528.4L520.9,527.4L523.6,527L526.3,526.6L527.7,526.4L530.8,526.3L533.8,525.9L536.2,525.4L538.6,524.8L540.8,524.2L543.6,523.4L545.3,522.5L547.1,521.7L547.6,520.6L545.3,520L545.9,518.9L547.2,518L549.4,517.5L551.6,516.8L553.7,516L555.3,514.9L556.2,513.6L557.7,512.8L560.3,513L561.4,513.9L564,514L564.1,513L565.1,511.9L567.5,512.2L568,513.2L570.6,513.4L573.4,512.9L576.1,512.6L578.6,512.7L579.5,513.9L581.9,512.9L584.1,512.4L586.6,512.1L589,511.7L591.2,511L593.7,510.6L595.6,510L597,509L598.5,509.7L600.8,509.3L602.3,510.6L603.5,511.6L606,511.1L607.1,510L609.4,509.2L612.2,509.4L613,510.4L614.9,509.4L617.3,509L619.9,508.9L622.2,509L624.6,509.3L626.9,509.5L627.8,510.4L629.1,511.2L631.5,510.7L634.1,510.6L636.6,510.6L639,510.6L641.3,510.2L643.7,509.9L645.7,509.1L647.9,508.6L650.2,508.3L652.1,507.5L653.6,506L655.1,505L657.3,505.5L657.9,506.5L659.7,507.1L662,506.9L663.3,507.9L664.7,508.6L667.1,508L668.3,506.7L670.4,506.2L673,505.3L675.3,504.9L678,504.3L680,503.7L682,503L684,502.4L686,502.7L688.3,501.7L690,500.9L692.1,501L694.2,500.3L695,499.3L697.2,498.5L699.2,497.9L701.7,497.4L703.8,497.2L705.8,497.4L707.8,497.7L709.3,498.5L709.1,499.7L710.7,500.7L711.7,501.5L714.2,501.8L715.4,502.6L716.9,503.4L719,503.6L721,503L723.5,501.8L725.3,502.5L727.3,502.8L729.3,503.1L731.3,503.4L733.6,503.4L734,506.3L733.5,507.1L732.6,508.4L730.2,509.1L727.9,510.1L727.7,511.2L730.1,511.2L729.3,512.3L727.7,513.3L726.1,514.5L727.3,515.3L729.6,515.6L732.3,515.1L734.1,514L735.4,513L737,512.1L738.8,511.3L739.9,510.3L741.8,508.9L743.3,508.6L745.9,508.5L748.2,508.2L750.7,507.7L752.4,506.6L753.6,505.6L755.7,504.5L758.3,503.8L760.5,503.2L762.3,502.2L763.8,501.7L765.7,501.3L767.8,501.6L770,501.3L772.4,500.9L774.7,501.1L776.8,500.3L779.1,498.4L779.5,499.2L779.7,500.5L781.3,501.1L783.3,501.3L785.7,501L787.8,501.2L789.9,501.3L791.5,501L793.2,501.2L794.6,501.8L796.8,501.4L799.3,501.4L801.6,501L803.6,501.4L805.8,500.4L807.6,499.5L809.7,498.6L814,496.5L815.2,496.9L816.4,497.7L817.2,498.7L818.8,500.5L820.9,500.5L823,500.5L825.7,500.2L828.4,499.8L830.9,499L833.1,498.1L835.7,498L837.8,497.4L839.2,498L839.6,498.9L840.5,499.8L843.1,499.7L844,500.4L846.1,501.2L848.7,501.4L851.2,501.2L853.7,500.3L856,499.4L858.2,499.2L859.9,499.6L862,499.9L864.5,499.4L866.5,499.4L868.3,499.7L870.1,500L872.6,499.5L875.4,499L877.8,498.9L880.4,498.9L882.7,498.6L885,498.4L886.9,496.9L888,495.7L888.7,496.5L888,497.8L887.6,499.1L887.7,500L889.1,500.5L891.8,500.4L894.8,500.3L897,500.1L899.9,500.1L902.1,500.1L905,500.2L907.2,500.4L907.9,501.3L906.4,502.4L907,503.3L908.7,503.9L910.4,504.7L912.8,505.2L915.3,505.6L917.1,506.1L919.5,506.1L922,505.2L923.1,506L923.8,506.9L925,507.5L927.4,507.8L929.5,508.1L929.3,509.2L931.1,509.9L931.6,510.9L933.5,511.3L936.1,511.3L938.2,511.5L940.9,511.4L943.2,511.6L945.1,512L946.6,512.7L948.1,513.2L948.6,514L947,515.1L944.6,516.1L942,517.3L940,518.3L937.5,519.4L934.2,519.8L931.7,520.8L928.2,521.4L925.8,522.4L923,523.4L920.4,524.2L918,525.3L916.2,526.3L914.3,527.5L912.9,528.4L912.6,529.4L911.6,530.4L911.2,531.2L914.4,531.6L913.4,532.7L909.2,533L905.3,533.6L901.3,533.7L897.4,535L895.1,536.2L892.7,537L890.1,537.9L891.2,538.6L890.4,539.6L890.3,540.4L891.1,541.1L892.2,541.8L893.5,542.4L896.2,543L894.6,544L898.7,544.4L898.7,544.6L898.4,545.1L904.9,544.6L907.3,545.2L909,545.7L891,549.7L867.9,552L580,552L292.1,552L269,549.7ZM411.6,460.5L415.5,462.4L419.2,463.2L418.6,464.8L416.4,464.9L414.7,463.8L414.4,465.1L412.6,466.1L409.8,465.7L407.7,464.8L404.9,464.3L401.1,462.6L398,460.8L393.2,457.3L395.5,457.9L399.8,460.1L403.5,461.2L404.3,459.8L404.3,457.6L406.1,456.2L408.1,456.6L409.5,458.1ZM431.9,451.7L434.3,453.1L433.9,454.2L430.8,455.2L429.3,454.1L427.6,455.5L425.9,454.1L428.4,452.1L430.8,453ZM759.3,447.1L755.3,447.4L755.8,445.6L756.6,444.3L756.9,443.6L758.3,444.6L760.6,445L760.4,445.7ZM968.4,417.6L970.4,418.8L972.1,418.3L974.5,417.7L976,417.9L974,421.9L972.5,423L970.7,425.7L970.3,424.8L967.1,427.1L966.7,426.9L965.1,426.8L965.1,424L965.9,421.8L965.9,418.9L966.8,417.3ZM1041.9,418L1041.7,419.4L1044.4,418.1L1044.3,419.5L1043.4,420.9L1041.4,422.4L1038,424.9L1035.8,426.2L1035.7,427.8L1033.6,427.9L1030.5,429.1L1028.3,431.3L1024.5,434.7L1021.4,436.1L1019.4,437.1L1017.1,437L1016.2,435.9L1013.5,435.7L1013.9,434.5L1017,432L1022.5,428.7L1024.6,428.1L1027.4,426.9L1030.8,425.1L1033.5,423.4L1036.3,420.9L1037.8,420L1039.4,418.2L1042.2,416.6ZM1055.5,402L1055.6,405.6L1056.9,403.3L1057.6,404.2L1056.6,406.7L1058.1,407.8L1059.8,408.1L1062.1,406.8L1063.2,407.2L1060.8,410.2L1058.8,412.2L1056.8,412.1L1055.5,413.1L1054.8,414.6L1054,415.2L1051.9,417L1049.1,419.3L1046.2,420.6L1046.3,419.7L1045.5,419.3L1048.8,416.5L1049,414.6L1047,413.3L1047.8,412.1L1050.4,410.9L1052.4,408.3L1053.5,406.1L1053.6,403.9L1054,403.3L1053.5,401.9L1052.9,398.9L1053,396.5L1054.2,396.3L1054.7,398.1L1056.4,399ZM1054.5,354.7L1053.1,355.5L1051.9,354.5L1050.3,353L1049,351.2L1047.7,348.9L1047.7,347.7L1048.9,347.8L1050.2,348.9L1051.1,350.1L1051.7,351L1053.5,353.1ZM1091.1,338.4L1091.8,339.3L1090.9,341.1L1089,341.6L1087.5,341.2L1087.6,339.7L1089,338.5L1090.2,338.9ZM1096.4,335.7L1094.4,336.6L1092.4,337.3L1092.3,336L1093.9,335.3L1094.9,335.1L1096.8,334.1L1096.4,335.7ZM63.2,334.1L63.2,334.1L63.8,333.9L63.8,335.5L63.6,335.7L63.6,335.7L63.6,335.7L63.2,334.1ZM1061.6,335.4L1060.6,335.9L1059.9,334.4L1060.2,333.5ZM1060.6,330.3L1060.5,333L1059.8,332.5L1059.2,332.7L1058.9,331.8L1059.4,329.2ZM724.2,325.6L724.5,329.7L725.1,331.2L724.7,332.9L724.1,333.9L723.3,331.9L722.7,332.9L723.1,335.4L722.7,336.8L721.9,337.6L721.5,340.4L720.1,344.4L718.3,349L716,355.4L714.5,360.1L712.9,364.1L710.5,364.9L707.9,366.3L706.3,365.4L704.2,364.2L703.6,362.4L703.7,359.4L702.9,356.7L702.8,354.3L703.5,351.9L704.9,351.3L705,350.2L706.5,347.6L706.9,345.4L706.4,343.8L706,341.7L705.9,338.6L707.1,336.7L707.6,334.6L709,334.5L710.7,333.8L711.8,333.1L713,333.1L714.8,331.2L717.3,329.1L718.2,327.4L717.9,326L719.1,326.4L720.8,324L721,322L722,320.5L722.9,322L723.6,323.4ZM993.5,326.3L994.1,329L996.2,327.7L996.9,329.1L998,330.4L997.5,331.9L997.6,334.8L997.7,336.5L998.3,336.9L998.5,339.8L997.8,341.5L998.3,343.8L1000.9,345.6L1002.6,347.2L1004.1,348.7L1003.6,349.5L1004.6,351.6L1004.8,355.3L1006.1,354.5L1006.9,356L1007.7,355.5L1007.2,359.1L1008.6,361.1L1009.5,362.4L1010.8,365.2L1010.7,367.9L1010.2,369.8L1009.3,371.9L1009.6,374.8L1008.3,377.8L1007.3,379.4L1005.3,382.4L1004.6,384.3L1003.1,386.7L1000.6,389.8L997.9,391.5L995.7,394.1L994.1,395.8L992,398.7L990.2,400.4L988.3,402.9L986.8,405.2L986.5,406.3L984.3,407.5L981.3,407.6L978.1,409L976.2,410.3L973.9,411.7L972.4,410.2L971,409.6L972.3,407.9L970.5,408.5L966.9,411L965.1,410L963.8,409.5L962.3,409.3L960.2,408.3L959.4,406.2L960,403.7L960.1,402L959.4,400.6L956.9,400.2L958.5,398.5L958.9,396L956.6,398.4L953.9,399L956.1,397.1L957.3,395.2L959,393.5L959.8,391L956.4,393.9L954.2,395L952.1,397.7L950.5,396.3L951.3,394.6L950.6,392.1L949.6,390.8L950.4,390L947.6,388L945.7,387.9L943.6,386.3L938.5,386.6L934.5,387.8L931,388.9L928.4,388.7L924.9,390.4L922.3,391.2L921.1,393L919.6,394.4L917.2,394.4L915.4,394.7L913.2,394.1L911.1,394.5L909.2,394.6L906.9,396.4L906.2,396.3L904.4,397.3L902.8,398.3L900.8,398.2L899,398.2L896.8,396L895.6,395.4L896.3,393.5L897.8,393L898.5,392.2L898.8,391L899.9,388.7L900.2,386.6L899.8,383.2L899.9,381.3L900.5,379.4L900,377.2L900.2,376.2L899.4,374.8L899.7,372.2L898.8,369.5L898.8,368L899.6,369.5L899.5,366.4L900.6,367.3L901.1,368.7L901.5,366.9L900.7,364.3L900.7,363.2L900.3,362.2L901.1,360.2L901.8,359.4L902.6,357.7L902.7,355.7L904.4,353.3L904,355.9L905.7,353.5L908.3,352.4L909.9,351L912.4,349.7L913.7,349.5L914.4,349.9L916.9,348.6L918.7,348.2L919.3,347.5L920.1,347.2L921.7,347.3L924.8,346.3L926.7,344.8L927.8,343L929.7,341.3L930.1,339.9L930.5,338.1L933,335.2L933.7,338.1L935.1,337.5L934.3,335.9L935.5,334.2L936.6,335L937.4,332.4L939.2,330.7L940.1,329.4L941.6,328.8L941.8,327.9L943,328.3L943.2,327.4L944.5,326.9L946,326.5L947.9,328L949.2,330L951,330.1L952.8,330.4L952.4,328.5L954.2,325.8L955.6,324.9L955.3,324.1L956.8,322.2L958.7,321L960.1,321.4L962.6,320.8L962.8,319L960.8,317.9L962.4,317.4L964.2,318.3L965.6,319.6L967.9,320.5L968.8,320.2L970.4,321.2L972.3,320.2L973.3,320.5L974.1,319.9L975.2,321.6L974.1,323.4L972.9,324.7L971.8,324.8L972,326.2L970.9,327.9L969.6,329.5L969.6,330.5L971.6,332.3L973.6,333.4L974.9,334.6L976.6,336.6L977.4,336.6L978.8,337.4L979,338.5L981.5,339.6L983.6,338.5L984.5,336.7L985.4,335.2L986.1,333.3L987.5,330.6L987.3,329L987.7,328L987.7,326.1L988.4,323.5L989.1,322.9L988.8,321.7L989.7,320L990.5,318.1L990.7,317.1L992,315.9L992.6,317.5L992.5,319.6L993.2,320L993.1,321.5L993.9,323.2L993.8,325.1ZM1048.7,315.3L1049.4,316.4L1047.4,316.4L1046.5,314.3L1048.2,315.1ZM929.1,314.4L927.9,314.5L924.3,312.1L927,311.5L928.4,312.5L929.4,313.5ZM1045.3,313.2L1044.2,313.3L1042.5,312.9L1041.9,312.4L1042.3,311.1L1044.1,311.6L1045,312.3ZM1047.8,312.3L1047.3,312.9L1045.5,310L1045.2,308L1046.1,308L1046.9,310.7ZM939.9,314.1L937.3,314.8L937,314.4L937.4,313.3L938.8,311.2L941.8,309.9L942.2,309.1L944.8,308.4L946.8,308.2L947.8,307.8L948.8,308.2L947.7,309.2L944.5,310.6L942,311.6ZM921.6,307.2L922.5,308.1L924.4,307.8L925,309.3L921.6,310L919.5,310.4L918,310.4L919.1,308.4L920.7,308.4ZM936.1,307.2L935.5,309.1L931.1,310L927.2,309.6L927.3,308.4L929.7,307.7L931.4,308.7L933.4,308.5ZM1043.1,308L1043.2,308.7L1041,307.3L1039.6,306.1L1038.6,305L1039.1,304.6L1040.3,305.4L1042.5,307ZM1036.7,304.7L1036.1,304.9L1034.9,304.1L1033.8,302.8L1034,302.2L1035.6,303.6ZM895,302.8L900.5,303.1L901.2,301.7L906.5,303.4L907.4,305.5L911.7,306.1L915.2,308.1L911.7,309.4L908.7,308.1L906,308.2L903.1,307.9L900.4,307.3L897.1,306L895,305.7L893.8,306.1L888.6,304.7L888.2,303.3L885.5,303L887.7,299.8L891.2,300L893.5,301.3L894.7,301.6ZM970.8,300.9L969.2,303.2L969.1,300.6L969.6,299.4L970.3,298.3L970.9,299.3ZM1032,302.9L1031.2,303.3L1030,302L1028.9,299.8L1028.5,297.3L1028.9,297L1029.1,298L1030,298.7L1031.2,300.8L1032.5,302ZM1021.1,298.4L1019.5,298.7L1019,299.6L1017.3,300.5L1015.8,301.2L1014.3,301.2L1011.9,300.3L1010.4,299.3L1010.7,298.3L1013.2,298.8L1014.8,298.5L1015.4,296.9L1015.8,296.8L1016,298.6L1017.6,298.3L1018.5,297.2L1020.2,296L1020,294L1021.8,294L1022.3,294.5L1022.2,296.4ZM949.6,291.6L948.5,292.7L946.5,292.1L946,290.7L948.9,290.5ZM959,290.4L959.9,293L957.5,291.6L955.1,291.3L953.5,291.5L951.5,291.4L952.2,289.6L955.8,289.4ZM1024.6,295.1L1023.6,296L1023.2,294L1022.6,292.7L1021.3,291.6L1019.7,290.2L1017.7,289.2L1018.5,288.4L1020,289.3L1021,290.1L1022.2,290.9L1023.3,292.3L1024.4,293.4ZM969.8,283.9L970.5,289.3L973.4,291.3L976,287.8L979.3,285.7L981.9,285.7L984.4,286.9L986.5,288.1L989.6,288.7L994.6,291.1L999.9,293L1001.8,294.7L1003.3,296.4L1003.6,298.4L1008.3,300.5L1008.9,302.2L1006.2,302.6L1006.7,304.8L1009,307L1010.6,310.6L1012.2,310.5L1012,312L1014.1,312.6L1013.2,313.2L1016.1,314.6L1015.6,315.6L1013.7,315.8L1013.1,315L1010.7,314.6L1007.8,314.1L1005.8,311.9L1004.3,310.1L1003.1,307.1L999.5,305.7L997,306.6L995.1,307.7L995.2,310.2L992.8,311.4L991.3,310.8L988.3,310.7L986,307.9L983.1,307.2L982.3,308.2L978.6,308.3L980.1,305.5L982,304.6L981.5,301L980.3,298.1L974.8,295.3L972.4,295L968.2,291.9L967.3,293.5L966.1,293.8L965.5,292.6L965.6,291.1L963.4,289.5L966.6,288.3L968.7,288.3L968.4,287.4L964.2,287.4L963.1,285.4L960.5,284.8L959.3,283.2L963.2,282.3L964.7,281.2L969.3,282.6ZM943.9,275.2L941.6,278.6L939.4,279.2L936.6,278.6L931.8,278.7L929.2,279.2L928.8,281.7L931.4,284.7L933,283.2L938.4,282.1L938.2,283.6L936.9,283.1L935.6,285.1L933,286.4L935.7,290.7L935.1,291.9L937.6,295.7L937.4,298L935.8,298.9L934.8,297.8L936.3,295L933.4,296.3L932.7,295.4L933.1,294.1L931.1,292.1L931.4,288.8L929.5,289.9L929.6,293.8L929.5,298.6L927.6,299.1L926.4,298.1L927.4,295L927.1,291.7L925.8,291.7L925,289.4L926.3,287.2L926.7,284.5L928.2,279.5L928.8,278.1L931.3,275.6L933.6,276.6L937.2,277.1L940.6,276.9L943.4,274.5ZM953.9,276.2L953.8,279.1L952.3,278.8L951.9,280.8L953.1,282.6L952.2,283L951.1,280.9L950.2,276.6L950.8,273.9L951.7,272.7L951.9,274.5L953.7,274.8ZM887,299.7L883.8,299.7L881.5,296.9L877.9,294.2L876.7,292.2L874.6,289.4L873.2,286.9L871,282.2L868.5,279.4L867.6,276.5L866.5,273.9L863.8,271.8L862.3,268.9L860,267L856.9,263.3L856.5,261.6L858.4,261.7L862.9,262.4L865.6,265.6L867.9,267.9L869.6,269.3L872.4,272.9L875.4,273L877.8,275.3L879.5,278.1L881.8,279.7L880.6,282.4L882.2,283.6L883.3,283.6L883.7,286L884.7,287.9L886.9,288.2L888.2,290.3L887.4,294.5ZM922.5,273.9L925.8,277L922.4,277.4L921.4,279.7L921.5,282.7L918.7,285L918.6,288.4L917.3,293.5L916.9,292.3L913.5,293.8L912.5,291.8L910.4,291.6L909,290.5L905.5,291.7L904.5,290.1L902.6,290.3L900.2,289.9L899.8,285.4L898.4,284.4L897,281.5L896.6,278.6L896.9,275.5L898.6,273.3L900.8,274.4L903,273.8L903.5,270.9L904.8,270.3L908.2,269.6L910.2,266.9L911.6,264.8L912.7,263.5L915,261.7L917.2,259.3L918.5,256.7L919.6,256.7L921.2,258.4L921.4,259.9L923.4,260.8L925.9,261.8L925.7,263.1L923.8,263.3L924.4,264.9L922.3,266.1L920.7,269.1L923,272.3ZM946,251.7L946.5,253.9L946.8,255.8L946.1,258.9L944.8,255.5L943.5,257.2L944.6,259.7L943.9,261.2L940.4,259.3L939.4,256.8L940.1,255.3L938.2,253.7L937.4,255.1L936,254.9L934,256.8L933.5,255.8L934.4,253L936.1,252L937.6,250.8L938.7,252.3L940.9,251.4L941.2,249.9L943.3,249.8L942.8,247.2L945.3,248.8L945.7,250.5ZM815.6,259.2L813.1,259.9L811.6,257.3L810.9,252.4L811.9,247L814,248.8L815.5,251.2L817.1,254.7L816.8,258.2ZM403.8,246L401.3,246.4L400.8,246.1L401.7,245.1L401.7,243.8L403.4,243.4L404,243.5ZM938.5,245.4L937.6,246.5L936.9,248.7L936.1,249.7L934.1,247.3L934.6,246.4L935.2,245.5L935.3,243.4L936.9,243.2L936.7,245.5L938.5,242.2ZM923,248.7L919.4,251.9L920.6,249.5L922.5,247.4L924.1,245.1L925.2,241.8L926,244.5L924.3,246.4ZM931.9,240L933.7,241L935.6,241L935.7,242.4L934.5,243.9L932.8,244.9L932.5,243.3L932.5,241.6ZM942.2,239.1L943.5,242.8L941.1,242L941.3,243.1L942.2,245.2L940.9,245.9L940.6,243.5L939.7,243.4L939,241.3L940.7,241.6L940.5,240.3L938.5,237.8L941.3,237.8ZM930.4,236L930,238.9L928.5,237.3L926.7,234.7L929.2,234.8ZM926.9,217.7L928.9,218.7L929.6,217.8L930,218.6L929.8,220L931.2,222.5L930.9,225.3L929.4,226.4L929.3,229.1L930.4,231.8L931.9,232.2L933.2,231.8L937,233.6L937,235.5L938,236.3L937.9,237.8L935.5,236.2L934.2,234.4L933.6,235.6L931.5,233.6L928.9,234.1L927.4,233.4L927.4,232L928.2,231.1L927.2,230.3L927,231.6L925.3,229.6L924.6,228.2L924,224.9L925.4,226L924.8,220.8L925.2,217.7ZM392.3,218.6L391.5,219.5L389.4,219.5L387.7,219.6L387.7,218.1L388.1,217.6L390.5,217.7L391.9,218ZM359.9,219.8L358.9,220.4L357.4,219.9L355.9,218.6L356.3,217.9L357.5,217.6L358.2,217.7L360.1,218.1L361.5,218.9L361.9,219.8ZM373,213.1L375.4,213.6L375.8,213L378,213.1L379.6,213.9L380.4,213.8L380.8,215L382.3,215L382.1,216L383.4,216.1L384.7,217.3L383.5,218.7L382.2,218L380.9,218.1L379.9,218L379.4,218.6L378.2,218.8L377.9,218L376.9,218.4L375.5,220.8L374.8,220.2L374.8,219.3L372.9,218.7L371.6,218.9L369.8,218.7L368.4,219.3L367,218.2L367.4,217.2L370,217.6L372.1,217.9L373.2,217.1L372.1,215.7L372.2,214.4L370.5,213.9L371.3,212.9ZM895.4,217.1L893.2,218.7L890.7,217.7L890.1,214.8L891.3,213.3L894.2,212.3L895.9,212.4L896.7,213.7L895.8,215.2ZM135.7,215.7L135.1,216.3L134.5,215.8L134.8,214.9L134.7,213.7L134.9,213.3L135.5,212.7L135.5,212.1L135.8,211.7L136,211.8L136.9,212.4L137.3,212.7L137.7,213.1L138.1,214.3L138,214.5L136.7,215.2ZM135.5,210.5L134.5,210.7L134.2,210L133.9,209.7L133.9,209.5L134.3,209.2L135.2,209.5L135.8,210.1ZM134,208.7L133.8,209L132.3,208.9L132.7,208.5ZM131.6,208.2L131.4,208.4L131.2,208.3L130.3,208.2L130.1,207.5L130,207.3L130.9,206.8L131.1,207.1ZM127.4,206L127,206.3L126.2,205.7L126.4,205.4L127,205.1L127.6,205.2ZM354.1,203.3L355,204.5L357.7,204.2L358.6,204.9L360.7,207L362.3,208.6L363.3,208.5L364.9,209.2L364.5,210.2L366.6,210.3L368.6,211.7L368.2,212.5L366.2,212.9L364.3,213.1L362.3,212.8L358.2,213.1L360.4,211.3L359.3,210.4L357.5,210.2L356.7,209.2L356.2,207.2L354.6,207.4L352.1,206.5L351.3,205.8L347.7,205.2L346.8,204.6L348,203.7L345.3,203.6L343,205.3L341.8,205.4L341.2,206.2L339.8,206.6L338.6,206.2L340.3,205.2L341.1,204L342.5,203.2L344,202.6L346.2,202.2L347,201.9L349.4,202.1L351.6,202.2ZM360.7,199.9L359.9,200.1L359.5,198.2L358.6,197.2L359.6,195L360.4,195.2L361,198ZM923.6,203.2L923,206L920.8,203.1L919.9,200.6L920.8,197.3L922.4,194.7L924,195.7L924,197.8ZM361.4,190.4L358.2,190.9L358.3,189.7L359.6,189.4L361.5,189.5ZM363.7,190.4L362.8,192.8L362.4,192.3L362.7,190.6L361.7,189.2L361.7,188.8ZM949.4,164.8L950.2,165.9L949.5,168L947.9,166.9L946.8,167.7L946.8,169.7L944.7,168.7L944.1,167.1L944.8,165.1L946.5,165.5L947.1,164ZM674.3,159.6L672.6,161.1L672.9,161.7L673,162L670.3,163.3L669,162.9L668.2,161.5L669.5,161.4L669.7,161.4L670,160.6L672,160.6ZM644.7,159.5L646.2,160.6L648.3,160.5L650.4,160.7L650.4,161.3L651.8,160.9L651.6,161.9L647.6,162.2L647.6,161.6L644.3,160.9ZM621.9,151L621.1,153.6L621.5,154.7L621.1,156.4L618.9,155.2L617.5,154.8L613.7,153.1L614,151.3L617.1,151.7L619.9,151.3ZM604.6,141L606.2,143.4L606,147.8L604.8,147.6L603.7,148.7L602.7,147.8L602.5,143.8L601.8,141.9L603.3,142ZM962.5,154.7L962.6,157.4L963.8,159L963.4,161.4L960.6,163L955.9,163.2L953.5,167.1L951.1,165.8L950,163.3L945.6,164L942.9,165.6L939.7,165.7L943.5,168.2L943.7,173.9L942.4,175.3L940.6,174L940.2,171L938.1,170L936.1,167.7L938.4,166.6L939,164.5L941.1,162.7L942.2,160.4L947.2,159.4L950.4,160.1L950.7,154.1L953.2,155.7L955.7,152.4L956.6,151L956.4,146.9L954.1,143.2L954.1,141L956.6,140.4L960.4,145.1L961.7,147.8L960.8,151.2ZM605.4,137.8L604.6,140.4L603.4,139.7L602.7,137.5L603.2,136.2L604.8,135ZM958.3,131.1L960.5,131.8L961.6,130.4L964.3,134.1L960.9,135L960.4,138.4L955,136.1L955.5,139.7L952.5,139.8L950.4,136.5L950.4,133.9L953.1,133.7L951.3,129.1L950.6,126.5L955.6,130ZM414.7,123.2L416.5,123.7L418.9,123.6L417.3,124.9L416.2,125.1L413.3,123.7L413,122.6L414.2,121.6ZM421.8,114.8L420.5,114.9L417.5,113.9L415.6,112.3L416.6,112.1L419.7,112.9L421.9,114.2ZM262.8,116.8L261.2,117.2L257.9,115.7L257.7,114.6L256.1,113.4L256.2,112.5L253.9,111.9L254,110.2L254.7,109.4L256.9,110.1L258.2,110.6L260.4,111L260.6,112.1L260.9,113.6L262.7,115ZM437.7,109.7L435.2,112.5L437.2,111.4L438.7,112.1L437.5,113.3L439.6,114.1L440.9,113.4L443.2,114.4L441.9,116.8L443.8,116.2L443.7,117.9L444,120L442.3,122.9L441.1,123L439.5,122.4L440.7,119.7L440.1,119.3L436.4,122.1L434.9,122L437.1,120.5L434.8,119.7L432,119.8L427,119.7L426.9,118.8L428.8,117.6L427.9,116.7L430.6,114.8L434.6,109.6L436.6,107.7L439.1,106.6L440.3,106.8L439.5,107.6ZM250.5,98.9L253.1,98.6L249.9,102.3L250.4,104.9L249.4,104.8L248.9,103.4L248.9,101.9L248.3,100.9L248.8,99.5L249.6,98.5ZM944.1,109.5L950.5,115.2L946.1,114.2L947.5,118.9L952.1,122.3L953.4,124.6L950.3,122.6L950.1,125.1L947.9,122.4L946.3,119.2L943.7,115.6L942.7,113.2L940,108.8L936.3,105.6L933.4,101.3L934.7,99.8L932.6,98.3L933.4,97.9L935.6,100L938.7,103.1L940.8,106.2ZM563,104.6L558.4,106.5L554.9,106L557.1,102.7L555.9,99.4L559.4,96.9L561.3,95.4L563.4,95.3L566,97.3L564.6,99.4L564.9,101.7ZM611.2,93.9L609.9,96.5L607.2,94.7L606.8,93.4L610.3,92.3ZM208.1,89.2L204.6,90.4L204.1,89.6L205,88.1L208.1,87L209.8,86.5L211.2,86.7L211.4,87.7ZM572.8,84.5L570.1,87.8L572.6,87.4L575.3,87.4L574.6,90L572.4,92.8L574.9,93L577.2,97L578.9,97.5L580.5,101.2L581.2,102.4L584.2,103.1L583.9,105.1L582.6,106.1L583.7,107.7L581.4,109.4L578,109.4L573.7,110.3L572.5,109.6L570.8,111.2L568.5,110.8L566.6,112L565.3,111.4L569.1,108L571.4,107.3L567.4,106.7L566.7,105.5L569.4,104.5L568.1,102.7L568.6,100.6L572.3,100.9L572.7,99.1L571,97.1L568,96.5L567.5,95.7L568.4,94.2L567.6,93.4L566.3,94.9L566.2,91.8L565,90.2L566,87L568,84.5L569.9,84.7ZM185.7,80.5L183.8,81L182.8,80.4L182.1,79.6L185,79.1L186.6,79.4ZM394.5,73.7L392.8,75.3L391.9,75L391.7,74.1L391.9,73.9L393.3,73L394.2,73.1ZM389.2,72L385.6,73.7L384,73.6L383.9,72.8L386.4,71.4L389.5,71.4ZM183.4,68.8L184.2,69.4L185.9,69.1L187,69.9L188.8,70.3L188.3,70.6L185.9,71.2L184.8,70.6L184.5,70L182.3,70.2L182,69.9ZM386.4,63.3L386.1,64.6L387.5,64.1L388.4,64.9L390.3,65.9L392.5,66.8L391.9,68.2L393.8,68L394.9,69L392.4,69.9L389.1,69.2L388.5,67.9L385.4,69.4L381.3,71L381.4,69.2L378.1,69.5L381,68.1L382.6,65.7L384.9,63ZM547.2,60.9L546.5,62.8L548.9,64.8L545.7,67.1L538.9,69.1L536.8,69.7L533.8,69.2L527.5,68.3L530,67L525.2,65.5L529.3,64.9L529.3,64.1L524.7,63.4L526.5,61.5L530,61.1L533.2,63L536.9,61.4L539.6,62.3L543.5,60.7ZM409.7,58.9L407.1,59L407.3,57.6L409.1,56L411.4,55.6L412.7,56.4L412.1,57.6L411.6,58ZM710.9,140.7L712.7,143.1L714,143.3L714.9,144.2L712.8,144.4L712.8,147.1L712.5,148.2L711.6,149L712,150.7L713.2,153.2L715.9,153.9L718.1,155.6L722,156.2L726.1,155.3L726.3,154.5L725.3,152.1L725.1,148.6L722.8,147.4L723.1,145.1L721.2,144.9L721.3,142.1L724,142.9L726.1,141.9L723.8,139.8L722.6,137.9L720.7,138.8L720.9,141.2L719.6,139.1L719.3,138.3L719.7,136.9L718.9,135.7L715.7,134.6L713.9,131.6L712.2,130.7L711.9,129.6L714.6,130L714.2,127.5L716.3,127L718.7,127.5L718.4,124.3L717.5,122.2L714.9,122.4L712.6,121.6L709.9,123L707.6,123.7L706.8,125.7L704.4,126.2L702.4,129.6L705.4,132.8L705.6,135L709.2,139ZM991.6,65.3L991.6,65.3L990.2,66.6L987,66.4L990.9,67.9L995,70.4L997,71.2L998.7,72.4L998.9,73.2L993.9,72.6L989.8,74.9L988.1,75.2L986.7,77.3L985.2,79.2L985.7,80.6L980.2,78.5L976.4,80.9L974.2,79.8L973.2,81.1L969.6,80.7L970.7,82.7L970.6,85.7L971.9,86.9L975.3,87.6L979,92.2L976.9,92.3L978.1,94.9L980.3,96.3L977.3,97.9L979.5,101.6L976.3,102.4L978.2,105.6L976.8,108.6L974.2,106.4L969.5,101.7L962.4,94.6L959.9,90.3L960.4,88.4L959.2,86.9L962.4,86.3L963.1,82.4L964.2,79.2L966.1,76.8L963.7,72.5L961.1,72.8L962.2,75.2L959.5,78.6L953.9,74.8L948.9,75.9L947.7,81L951.3,82.9L946.7,83.7L943.3,84L941.5,81.8L937.4,81.3L935.7,82.8L928,82.3L920.8,83.2L917.8,89.3L913.9,96.7L918.1,97.1L920.7,99.1L923.6,99.8L924.1,98.2L927,98.4L933.1,101.9L935.1,104.7L935.3,107.9L937.7,111.8L939.9,117L938.9,121.7L939.3,124L938,127.9L936.6,131.7L935.9,133.7L933.4,135.6L931.7,135.7L929.2,134.1L926.9,136.5L927.1,137.6L925.9,137.4L925.4,138.5L925.1,139.7L926.3,142.1L925.3,142.8L925.1,143.4L924.5,144.4L923,145L922.2,145.9L922.8,147.3L922.6,147.7L924,148.2L926.1,149.7L930.1,153.7L931.7,155.9L933.3,159.8L933,161.6L930.8,162.3L929.1,163.7L926.7,164L925.8,162.1L925.3,159.6L922.7,156.1L924.5,155.5L921.5,152.6L919.9,152L919.8,152.6L919.1,152.9L918.8,152.2L918,151.9L917,151.4L917.1,149.9L917.6,149.5L917.1,148.9L917,147.1L916.6,146.5L914.9,146.2L913.2,145.3L909.9,146.3L908.6,147.8L906,148.7L906.8,147.2L905.7,145.9L906.9,143.6L904.7,141.9L902.9,143.1L900.9,145.4L900.1,147.6L897.5,147.7L896.8,149.3L899.1,151.6L901.5,152.1L902.2,153.6L904.7,154.6L906.8,152.2L909.7,153.5L911.5,153.6L912.7,155.4L909.2,156.3L908.6,158.1L906.6,159.8L906,162.2L909.6,164.1L911.9,167.4L914.6,170.5L917.3,173.1L918.1,175.6L916.6,176.5L917.8,178.3L919.8,179.4L920.2,182.1L920.3,184.8L918.8,185.1L917.8,188.8L916.7,193.2L915,197.3L911.9,200.4L908.6,203.2L905.5,203.6L904,205.1L902.8,204L901.6,205.7L897.9,207.4L895,207.9L894.7,211.5L893.2,211.7L892,209.2L892.4,207.9L888.4,206.8L887.2,207.4L883.9,210.3L882.1,213.5L881.8,215.8L884.6,219.4L887.9,223.8L890.8,225.9L893,228.6L895.1,234.8L895.3,240.8L893.1,243L890,245.1L887.9,247.9L884.5,251.1L883.3,248.9L884,246.6L881.7,244.7L879.2,244.2L877.9,242.5L876.1,239L873.3,237.5L870.8,237.5L871,234.9L868.5,234.9L868.6,238.6L867.5,243.5L866.8,246.5L867.2,248.9L869.1,249L870.5,252.1L871.2,255L872.9,256.9L874.7,257.3L876.3,259.1L877,259.4L878.8,261.4L880.1,263.7L880.3,265.9L880.1,267.5L880.4,268.6L880.7,270.6L881.7,271.5L882.9,274.5L882.9,275.7L880.8,275.9L878,273.4L874.5,270.7L874.2,269L872.4,266.8L871.9,264L870.8,262.1L871,259.7L870.3,258.3L869.1,257L868.5,255.3L866.8,253.4L865.3,251.8L865,253.8L864.3,251.9L864.5,249.8L865.1,246.6L864.6,244.1L865.3,241.5L864.1,239.5L864,235.9L862.6,234.1L861.2,230.1L860.2,225.8L858.6,223L856.9,224.7L854,227.1L852.3,226.8L850.4,226L850.9,221.8L849.9,218.7L847.1,214.8L847.2,213.6L845.5,213.1L843.1,210.4L842,208.6L841.5,206.9L840.7,205.3L839.2,203.3L836.6,203.2L837.1,204.6L836.5,206.4L835.2,205.8L834.8,206.4L834,206L832.8,205.7L832.6,206.9L830.7,206.9L827.3,207.6L827.8,210.1L826.6,212.1L822.8,214.4L820.1,218.4L818.2,220.5L815.6,222.7L815.8,224.3L814.5,225.1L812,226.3L810.7,226.5L810.1,229.1L811.1,233.4L811.5,236.2L810.5,239.4L810.9,245.2L809.4,245.3L808.3,247.9L809.2,249L806.6,250L805.8,252.2L804.7,253.2L801.8,250.1L800.2,245.4L798.8,242L797.7,240.4L795.9,237.1L794.9,232.9L794.2,230.8L791.1,226.2L789.3,219.6L788,215.3L787.5,211.2L786.6,208.1L782.7,210.1L780.6,209.7L776.4,205.6L777.6,204.4L776.6,203L772.9,200.2L770.7,199.3L769.5,196.9L767,194.3L761.9,194.9L757.3,195L753.4,195.5L748,194.5L744.8,193.7L741.6,193.2L739.9,189.1L738.5,188.5L736.4,189.1L733.7,190.7L730.2,189.6L727,187L724.2,186L722,182.8L719.3,178.3L717.9,178.9L716,177.7L715.1,179.1L713.5,178.9L714.2,180.4L714.1,181.2L715.3,183.7L716.7,186.6L718.2,187.4L718.8,188.6L720.8,190L721.2,191.4L721,192.5L721.5,193.7L722.4,194.6L722.9,195.7L723.4,196.6L723,194.1L723.5,192.3L724.2,192L725.2,193L725.5,195L725.1,197L725.7,198.3L726.2,198.1L726.4,199.1L728.6,198.5L730.9,198.6L732.7,198.7L734.3,196.4L736.2,194.3L737.7,192.2L738.4,191L738.8,191.3L738.7,192.7L738.4,193.3L739.1,196L740.6,198.3L742.3,199.5L744.5,200L746.2,200.6L747.7,202.5L748.6,203.7L749.7,204.1L749.7,204.8L748.9,206.9L748.6,207.8L747.5,208.9L746.6,211.2L745.3,211L744.8,211.8L744.5,213.5L745.1,215.8L744.9,216.2L743.5,216.2L741.9,217.5L741.7,219.1L741.1,219.8L739.3,219.8L738.3,220.6L738.4,222L737.1,222.9L735.5,222.6L733.7,223.8L732.3,224L730.3,224.9L729.9,226.4L729.9,227.5L727.1,228.9L722.6,230.5L720.2,232.9L718.9,233.1L718,232.9L716.4,234.3L714.6,234.9L712.2,235.1L711.5,235.3L710.9,236.2L710.2,236.4L709.8,237.3L708.3,237.2L707.4,237.7L705.4,237.5L704.6,235.5L704.6,233.7L704.1,232.7L703.4,230.2L702.5,228.8L703,228.6L702.7,227.1L703,226.4L702.8,225L702.3,223.5L701.4,222.5L701.1,221.2L699.5,220L697.8,217.1L696.9,214.4L694.7,212.1L693.4,211.5L691.3,208.3L690.8,205.9L690.8,203.9L688.9,200.2L687.5,198.9L685.9,198.2L684.8,196.2L684.9,195.5L684,193.7L683.1,192.9L681.8,190.4L679.9,187.7L678.3,185.4L676.9,185.4L677.2,183.5L677.2,182.3L677.4,181L677.3,180.5L676.6,181.9L676.2,184.4L675.6,186.2L675,186.8L674,185.7L672.6,184.2L670.2,179.3L670,179.6L671.4,183.2L673.4,186.6L675.9,191.9L677.1,193.7L678.1,195.6L680.9,199.4L680.4,200L680.7,202.2L684.2,205.2L684.7,205.9L685.8,209.2L685.3,209.8L685.9,213.3L687.2,217.3L688.3,218.2L689.9,219.4L691.8,223.3L692.8,226.4L694.4,228.1L698.5,231.2L700.2,233.2L701.8,235.1L702.8,236.3L704.3,237.3L705,238.3L704.9,239.7L703.3,240.5L704.6,241.4L705.6,242.1L706.2,243.5L707.6,244.9L709,244.9L711.7,244L714.8,243.6L717.3,242.6L718.7,242.3L719.7,241.7L721.4,241.6L722.3,241.6L723.6,241.1L725.1,240.7L726.4,239.6L727.5,239.6L727.6,240.5L727.5,242.4L727.6,244.2L727,245.4L726.3,249.1L725.1,252.8L723.4,257.1L721,262.1L718.6,265.8L715.3,270.4L712.4,273.1L708.1,276.5L705.4,279L702.2,283.1L701.5,284.9L700.8,285.7L698.8,287L698.1,288.4L697,288.7L696.5,291L695.6,292.4L695,294.6L693.8,295.7L692.4,299.9L692.5,301.8L694.4,303L694.4,303.9L693.6,305.9L693.7,306.9L693.5,308.5L694.5,310.6L695.6,314L696.6,314.7L697,316.2L696.8,319.6L697,322.5L696.9,327.8L697.3,329.4L696.3,331.8L695.1,334.2L693.2,336.3L690.5,337.6L687.1,339.2L683.7,342.8L682.6,343.4L680.5,345.8L679.2,346.6L678.9,349L680.1,351.6L680.5,353.6L680.5,354.6L681,354.4L680.7,357.7L680.1,359.3L680.7,359.9L680.2,361.3L679,362.5L676.6,363.6L673,365.5L671.7,366.7L671.9,368.1L672.6,368.4L672.2,370.2L671.3,372.6L670.8,375.4L669.9,377L667.9,378.7L667.3,379.2L666,380.9L665.1,382.6L663.3,385.1L659.9,388.5L657.8,390.6L655.6,392.1L652.6,393.4L651.2,393.6L650.8,394.5L649.2,394L647.7,394.7L644.8,394L643.1,394.4L642,394.3L639.1,395.6L636.7,396.1L634.9,397.4L633.7,397.5L632.6,396.3L631.7,396.2L630.6,394.7L630.4,395.2L630.1,394.3L630.2,392.3L629.5,390L630.4,389.4L630.4,386.8L628.8,383.6L627.5,380.8L627.5,380.8L625.7,376.4L623.7,373.8L622.7,371.3L622.2,368L621.5,365.6L620.8,360.4L620.8,356.3L620.5,354.5L619.4,353.1L618,350.3L616.6,346.2L616,344.1L613.8,340.8L613.6,338.2L613.4,336.1L613.8,333.2L614.9,330.1L615,328.6L616,325.6L616.7,324.2L618.4,322L619.4,320.5L619.7,318L619.6,316.1L618.7,314.9L618,312.8L617.3,310.8L617.4,310.1L618.3,308.8L617.5,305.5L616.9,303.3L615.5,301.2L615.7,300.5L615.3,299.5L614.6,296.9L612.2,293.4L609.2,290L607.3,287.2L605.6,283.7L605.7,282.6L606.3,281.5L607,279.1L607.6,276.6L607,276.1L608,272.3L608.4,269.7L607.3,267.4L606,266.9L605.4,265.4L604.7,264.9L604.7,264L601.7,265.2L600.6,265L599.4,265.7L597.1,265.7L595.6,263.6L594.6,261.1L592.5,258.9L590.4,259L587.8,259L585.4,259.3L583.1,260.1L578.5,262L576.9,263.2L574.3,264.2L571.7,263.2L570.4,263.2L568.4,262.6L566.5,262.6L563.1,263.2L561,264.2L558.2,265.4L557.6,265.3L556.8,265.4L553.9,263.8L551.2,261.2L548.8,259.4L546.8,257.2L546,256.9L544,255.6L542.5,253.8L542,252.5L541.6,250.1L540.4,248.1L539.3,246.7L538.6,246.3L537.8,245.6L537.5,244.2L537.1,243.4L536.3,242.9L534.8,241.5L533.5,241.2L532.9,240.3L532.9,239.8L532.1,239.1L531.9,238.3L531.4,235.8L531.8,234.3L530.7,231.6L529.3,230.4L530.6,229.8L532,227.4L532.7,225.7L532.5,223.9L533.4,222.2L533.8,219L533.6,215.7L533.3,214L533.6,212.3L532.9,210.7L531.4,209.3L531.6,207.8L531.8,206.3L532.9,205.4L533.9,203.6L533.7,202.4L534.8,200.1L536.4,197.9L537.4,197.4L538.2,195.4L538.3,193.6L539.4,191.5L541.3,190.3L543.2,186.8L544.7,185.5L547.3,185.1L549.6,182.8L551,181.9L553.4,179L552.8,174.8L553.9,171.9L554.3,170.1L556.2,167.8L559,166.3L561,164.9L562.9,161.4L563.8,159.3L565.8,159.3L567.5,160.8L570.1,160.5L572.9,161.3L574.1,161.3L576.7,159.5L579.7,158.9L581.4,157.5L584,156.5L588.6,155.9L593.1,155.6L594.5,156.1L597,154.8L599.9,154.7L601,155.5L602.9,155.3L605.8,154L607.7,154.4L607.7,156.1L609.9,154.8L610.1,155.5L608.8,157.1L608.9,158.7L609.8,159.5L609.6,162.5L607.8,164.2L608.4,166L609.8,166.1L610.6,167.7L611.6,168.2L614.9,169.4L616.1,169.1L618.4,169.6L622.1,171.1L623.5,174.2L626,174.8L630,176.2L633,177.9L634.4,177L635.6,175.5L634.8,172.9L635.6,171.2L637.5,169.6L639.4,169.2L643.1,169.9L644.2,171.4L645.2,171.4L646.1,172L648.9,172.4L649.7,173.5L653.3,173.4L656.1,174.3L658.9,175.3L660.2,175.9L662.3,174.8L663.3,173.8L665.7,173.5L667.8,174L668.6,175.7L669.2,174.5L671.5,175.3L673.7,175.5L675,174.7L675.7,173.6L675.4,173.4L676,171.8L676.4,169.2L676.7,168.4L676.7,168.4L677.4,165.6L678.6,163.2L678.6,163.1L678.1,160.5L678.6,159.1L677.4,157.6L678.3,156.3L676.7,156.6L674.3,155.8L672.6,157.8L668.6,158.2L666.2,156.3L663.2,156.2L662.7,157.6L660.9,158L658.1,156.2L655.1,156.3L653.2,152.9L651.1,151.1L652.2,148.5L650.3,146.8L653,143.6L657.1,143.5L658,141L663.1,141.4L666,139.2L669,138.3L673.4,138.2L678.4,140.6L682.4,141.9L685.4,141.3L687.7,141.6L690.6,139.9L690.8,138.5L689.8,136.2L688.1,135L686.5,134.6L685.4,133.6L681.6,130.7L678.4,129.5L675.9,127.5L677.7,127L679.4,124.2L677.8,122.9L681.4,121.6L681.2,120.9L678.9,121.4L676.9,121.7L675.4,122.7L673,122.9L670.9,124.1L671.4,126.2L672.8,127L675.4,126.8L675.1,128L672.3,128.5L669,130.5L667.4,129.8L667.8,128.2L664.8,127.3L665.2,126.6L667.5,125.5L666.7,124.8L662.5,123.9L662.2,122.7L659.8,123.1L659.1,124.9L657.4,127.4L657.5,128.2L656.4,128.9L655.5,128.6L655.2,132.6L654,134L653.3,136.4L654.4,138.3L654.8,139.6L657.3,140.7L656.9,141.5L653.7,141.7L652.7,142.7L650.6,144.5L649.6,143L649.6,142.3L648,142.2L646.5,141.9L643.4,142.7L645.4,144.6L644.1,145.2L642.6,145.2L641,143.4L640.6,144.2L641.3,146.2L642.8,147.8L641.9,148.5L643.5,150.1L644.9,151L645.1,152.9L642.5,152L643.4,153.8L641.7,154.1L643,157.1L641.2,157.1L638.9,155.7L637.7,153L637,150.7L635.9,149.2L634.3,147.3L634.1,146.3L633.6,146.1L633.5,145.3L632,144.2L631.6,142.6L631.7,140.3L632,139.3L631.5,138.7L630.9,138.5L630.1,137.4L628.9,136.7L626.3,135.5L624.7,134.3L622.2,133.3L619.9,130.9L620.4,130.6L619.1,129.2L619,128.1L617.3,127.6L616.6,129L615.7,127.9L615.7,126.7L615.8,126.7L616.4,126.4L614.3,125.9L612.2,127.1L612.4,128.7L612.2,129.7L613.1,131.4L615.7,133L617.1,135.8L620.2,138.5L622.3,138.5L623,139.2L622.3,139.9L624.8,141.1L626.8,142.1L629.2,143.8L629.5,144.5L629.1,145.7L627.5,144.1L625.1,143.6L624.1,145.7L626.1,147L625.9,148.7L624.8,148.9L623.5,151.8L622.4,152.1L622.4,151L622.8,149.2L623.4,148.5L622.2,146.6L621.3,144.9L620.2,144.5L619.3,143L617.6,142.4L616.3,141.1L614.4,140.8L612.2,139.3L609.7,137.2L607.8,135.2L606.8,131.9L605.5,131.5L603.3,130.5L602.2,130.9L600.7,132.4L599.6,132.7L597.3,134.6L592,133.7L588.2,134.8L587.9,136.8L588.1,138.7L585.6,140.9L582.2,141.6L581.9,142.8L580.3,144.6L579.2,147.4L580.3,149.3L578.7,150.8L578.2,153L576.1,153.6L574.2,156.2L570.7,156.3L568.1,156.2L566.4,157.4L565.3,158.7L564,158.4L563,157.3L562.3,155.3L559.8,154.8L558.7,155.7L557.2,155.2L555.8,155.6L556.3,152.9L556.1,150.9L554.9,150.6L554.3,149.3L554.6,147.1L555.7,145.9L556,144.5L556.6,142.5L556.6,141.1L556.1,139.9L556,138.7L556.2,136.4L555.2,134.9L559,132.5L562.2,133.1L565.7,133.1L568.5,133.7L570.7,133.5L575,133.6L576.4,131.6L576.9,125L574.2,121.5L572.3,119.9L568.4,118.6L568.2,116.2L571.6,115.5L575.8,116.3L575.1,112.6L577.5,114L583.4,111.5L584.2,108.8L586.4,108.2L588.4,107.5L589.7,106.7L591.8,101.9L595.1,100.6L597.2,100.7L597.7,100L599.7,99.8L600.2,100.5L601.9,99L601.2,97.8L601,96L600,94.2L599.7,91L600.1,90.1L600.8,89.2L602.9,89L603.7,88.1L605.6,87.3L605.6,88.9L605,89.9L605.3,90.8L606.7,91.2L606.1,92.4L605.4,92.1L603.7,94.4L604.5,95.9L604.6,97.1L607.1,97.9L607.2,99L609.7,98.4L611,97.5L613.9,98.8L615.1,99.8L616.7,98.9L620.5,97.4L623.5,96.3L626,96.9L626.3,97.6L628.7,97.7L629.1,96.3L632.4,95.2L631.6,92.6L631.4,90.2L632.3,88.3L634.5,87.2L636.7,89.5L638.7,89.5L638.8,87.1L638.8,85.2L638,85.6L636.3,84.5L635.9,82.7L638.8,81.9L641.7,81.4L644.4,82L646.9,81.9L649.3,80.2L646.5,78.7L642.3,79L638.3,80.1L634.5,80.7L632.9,79.1L630.5,78L630.6,75.1L629.1,72.3L630,70.6L631.8,68.7L636.6,65.5L638,64.9L637.6,63.6L634.2,62.2L630.4,63.1L628.5,65.1L629.1,66.9L625.8,69.3L621.6,71.9L620.3,76.2L622.2,78.3L624.7,80L622.9,83.5L620.4,84.2L620,89.4L618.9,92.4L615.9,92.1L614.7,94.6L611.9,94.7L610.9,91.7L608.6,88.2L606.5,83.8L604.7,81.9L600.2,85.5L597,86.2L593.6,84.6L592.7,81.3L591.7,74.2L593.8,72.3L599.8,69.8L604.2,66.7L608,62.6L612.9,57L616.4,54.8L622,51.3L626.7,50L630.3,50.2L633.2,47.8L637.2,48L640.9,47.4L648.2,49.5L645.5,50.2L648.3,52L650.4,51L654.4,52.7L660.6,53.4L669.8,56.6L671.9,58L672.6,59.9L670.5,61.5L667,62.3L656.4,60L654.8,60.4L659,62.5L660.3,66.9L663.5,67.8L665.4,68.6L665.4,67.2L663.6,65.8L664.9,64.8L670.9,66.6L672.6,65.9L670.5,63.7L675,60.9L677.2,61L679.6,62L680.3,60L677.9,58.3L678.5,56.6L676.3,54.8L682.8,55.7L684.6,57.3L681.9,57.7L682.4,59.3L684.5,60.3L687.8,59.7L687.7,57.8L691.9,56.4L698.8,54L700.5,54.1L698.9,55.9L701.8,56.2L703,55.2L707.2,55.1L710,53.9L713.2,55.6L714.9,53.7L711.9,52.1L712.7,51.2L719.5,52L723,52.9L732.5,56.2L733.3,54.7L730.3,53.2L729.9,52.6L727.2,52.3L727.2,50.9L725,48.7L724.5,47.8L727.2,45.3L727.3,42.8L728.6,42.3L734.6,43L735.9,44.5L735.1,46.8L736.9,47.7L738.7,49.6L740.2,53.5L743.5,55.3L743.5,57.2L741.2,61.3L744,61.7L744.3,60.7L746.5,59.9L746.3,58.5L747.6,57.1L745.4,55.5L745.5,53.6L742.9,53.4L741.6,51.8L741.8,48.9L737.8,46.7L740.6,44.8L739,42.8L740,42.8L742,44.3L742.7,47L745.3,47.5L743.1,45.5L746.1,44.4L750.5,44.3L755.4,45.8L752.1,43.5L750,40.6L753.4,40.1L758.5,40.2L762.8,39.8L760.1,38.4L761.3,36.7L763.7,36.6L766.7,35.3L771.9,34.9L772,34.2L777.2,34L779.4,34.6L782.8,33.2L786.6,33.2L786.2,32.1L787.2,31L791,30L795.2,30.8L793.1,31.4L798.1,31.8L799.8,33.1L801.1,32.5L807.1,32.5L813,33.8L815.6,34.7L816.4,36.1L814.8,36.9L810.7,38.4L809.8,39.2L812.7,39.6L816.4,40.2L817.9,39.7L820.5,41.5L820.8,40.8L823.8,40.3L831,40.8L832.7,42.1L842,42.5L840.1,40.4L845,40.9L848.4,40.8L853.2,42.3L856,44L855.8,45.2L860.6,47.4L865.1,48.5L864.4,45.6L869.1,46.8L872,46.1L877,46.9L877.8,46.2L881.7,46.6L877.5,44L879,42.8L900.3,44.6L904,46.2L912,48.4L920.2,47.8L925,48.3L928.2,49.5L930.3,51.5L933.9,52.3L936.2,51.7L940,51.7L944.8,52.2L948.6,51.9L955.5,54.5L957.1,53.5L953.1,51.7L952.6,50.5L960.5,51.3L964.9,51.1L972.9,52.4L977.6,53.7L991.6,65.3ZM182.4,53.7L182.4,53.7L182.4,53.7L185.2,55.9L187.5,58.7L185.2,60.5L185.9,61.3L187.8,59.2L193.4,59.6L194.7,62.3L191,63.6L187,63.9L183.7,66.8L182.1,67.4L180,67.3L179.4,66.3L177.4,65.4L178.3,64.1L176.6,63.7L173.5,64L173.5,63L175.3,61.9L171.7,62.6L171.1,64L168.4,65.3L168.4,65.3L182.4,53.7ZM369,53.3L367,54.3L364.6,53.4L362.6,53.7L360.5,52.4L363,51.6L365.4,50.3L367.2,51.1L368.1,51.6L368.4,52.2ZM969.5,47.4L970.7,48.4L968.5,48.5L967,47.6L968.2,46.5L969.5,47.4ZM191.8,46.5L191.8,46.5L191.8,46.5L190.5,47.4L191.8,46.5ZM191.8,46.5L192.2,46.4L194,46.4L196.1,47.2L195.4,47.6L192.3,48.2L189.3,48.4ZM381,52.2L379.1,55.1L383.5,52.8L385,54.7L383,56.8L384,58.8L387.6,56.7L390.7,54.2L392.7,51.1L395.7,51.3L398.7,51.7L400.8,53.1L400.1,54.5L397.6,56.1L398.3,57.6L397.2,59L391.7,61L388.3,61.5L386.5,60.6L385,62.1L381.4,64.6L380,65.9L376.2,67.9L372.8,68.1L370.2,69.3L368.9,71.3L366,71.6L361.8,74.1L357.3,77.5L355,79.9L352.9,83.5L356.1,84L355.7,86.9L355.6,89.3L359.3,88.7L363.2,90L365,91.2L366.1,92.7L368.7,93.6L370.7,94.9L374.7,95.1L377.3,95.4L375.7,98.1L375.1,101.3L375.4,104.9L378,108L380.4,106.9L383,103.6L383.7,98.6L382.6,96.9L387.2,95.4L390.9,93.2L393.2,91L393.9,88.9L393.4,86.3L391.5,83.9L395.8,80.7L396,77.9L397.4,73.2L399.4,72.5L403,73.3L405.3,73.6L407.6,72.8L409.3,73.8L411.4,75.6L411.6,76.8L415.7,77L414.6,79.6L413.8,83.5L415.8,83.9L416.9,85.8L421,84L424.6,80.6L426.7,79.2L427.5,82L429.2,85.9L430.6,89.6L429,91.6L431.6,93.4L433.3,95.2L436.9,96L438.2,97L438.4,99.7L440.2,100.1L440.9,101.4L440.1,105L437.9,106.2L435.8,107.3L431.3,108.5L427.4,111.1L422.9,111.6L417.7,111L413.9,110.9L411.2,111.2L408.3,113.5L404.6,114.9L399.6,119.3L395.6,122.3L398,121.8L403.5,117.5L409.7,114.7L413.6,114.4L415.4,116L412.3,118.2L412.2,121.8L412.3,124.2L415.3,125.9L419.7,125.4L423.3,121.7L422.8,124.1L424.2,125.3L420.4,127.5L414.1,129.4L411.2,130.8L407.6,133.2L405.7,132.9L406.3,130.1L411.6,127.4L407.4,127.5L404.4,127.9L404.5,129L401.3,130.6L398.3,131.7L395.2,132.7L393.1,134.9L392.7,135.5L392.1,137.2L392.6,139L393.6,139.1L393.7,137.9L394.3,138.6L393.8,139.6L391.9,140.1L390.6,140L388.5,140.6L387.3,140.8L385.7,140.9L383.2,141.9L387.3,141.3L387.9,141.9L383.9,142.9L382.2,142.9L382.4,142.5L381.4,143.5L382.1,143.6L380.9,146L378.3,148.6L378.3,147.7L377.8,147.6L377.1,146.7L377.2,148.5L377.7,149.1L377.4,150.4L376.2,151.7L374,154.4L373.8,154.3L375.2,152L374.2,150.7L374.6,147.9L373.7,149.4L373.7,151.5L372.1,151L373.6,152L373,155.3L373.7,155.5L373.7,156.7L373.3,160L371,162.5L367.9,163.5L365.7,165.5L364.2,165.7L362.6,167L361.9,168.1L358.4,170.3L356.5,171.9L354.8,173.9L353.8,176.3L353.8,178.7L354.2,181.6L355,184L354.7,185.5L355.3,189.4L354.8,191.7L354.5,193L353.4,195L352.5,195.5L351.2,195.1L351,193.6L350,192.8L349.1,189.9L348.2,187.3L348.1,186L349.1,183.7L348.7,181.9L347.1,179L346.1,178.5L343,180L342.5,179.9L341.5,178.3L340,177.5L336.7,177.9L334.3,177.5L332.2,177.7L330.9,178.2L331.2,179.2L330.8,180.5L331.3,181.2L330.7,181.7L329.7,181.2L328.5,181.8L326.5,181.7L324.9,179.9L322.3,180.3L320.5,179.5L318.7,179.8L316.2,180.6L313.1,183.1L309.9,184.5L308,186.2L307.1,187.7L306.5,190L306.3,191.6L306.6,192.8L306.6,192.8L306.6,192.8L304.9,195.8L303.9,198.2L302.9,202.7L302.3,204.4L302.5,206.2L303.1,207.9L303.2,210.5L304.7,213L305.1,214.9L305.9,216.6L308.8,217.5L309.8,218.9L312.5,218L314.7,217.6L316.9,217L318.8,216.4L320.8,215.1L321.8,213.1L322.4,210.3L323.1,209.3L325.1,208.4L328.3,207.6L330.8,207.7L332.5,207.4L333.1,208.1L332.8,209.8L330.9,211.8L330,213.8L330.4,214.4L329.8,215.9L328.7,218.5L328.1,217.7L327.5,217.7L327.4,218.2L328,218.2L327.8,219.1L327.2,220.6L327.3,221.1L326.9,222.3L327,222.7L326.5,224.4L325.8,225.3L325.3,225.4L324.6,226.5L325.5,227.1L325.8,226.6L326.6,227.1L326.9,227.2L327.6,226.6L328.4,226.6L328.6,226.8L329.1,226.7L330.4,227L331.7,226.9L332.7,226.5L333.1,226.1L334,226.3L334.6,226.5L335.4,226.5L336,226.2L337.2,226.6L337.7,226.7L338.5,227.3L339.2,228.1L340.2,228.6L340.9,229.5L340.6,229.9L340.4,230.6L340.6,231.8L339.8,233L339.4,234.4L339.1,235.8L339.2,236.7L339.2,238.2L338.7,238.6L338.3,240L338.4,240.9L337.8,241.7L337.8,242.7L338.2,243.2L338.8,245L339.9,246.4L341.1,247.8L342.1,249L342,249.7L343.1,249.9L343.4,249.6L344.2,250.5L345.6,250.2L346.9,249.4L348.7,248.7L349.7,247.7L351.3,247.9L351.2,248.2L352.8,248.3L354.1,248.9L355,249.9L356,250.8L357.5,250.9L359.8,248.6L361,248.2L361.1,247.1L361.8,244.3L363.6,242.7L365.4,242.7L365.7,242L367.9,242.2L370.3,240.5L371.5,239.8L373,238.2L374,238.4L374.7,239.3L374,240.4L373.9,241.2L372.2,241.6L373,243.1L372.9,244.9L371.5,246.8L372.4,249.5L373.7,249.3L374.5,246.8L373.7,245.7L373.7,243.1L377.4,241.7L377.1,240.1L378.1,239.1L379,241.5L381,241.5L382.8,243.4L382.9,244.5L385.4,244.5L388.6,244.2L390.1,245.7L392.3,246.1L394,245.1L394.1,244.2L397.7,244L401.1,244L398.6,245L399.5,246.5L401.8,246.8L403.9,248.5L404.3,251.1L405.8,251.1L406.9,251.9L408.8,253.1L410.5,255.3L410.5,257L411.6,257.1L413.1,258.7L414.2,259.9L417.7,260.6L418,260L420.3,259.7L423.4,260.6L424.4,261L426.5,261.8L429.5,264.7L430,266L431,265.9L431.7,267.7L433.2,273.6L434.8,274.2L434.9,276.5L432.7,279.3L433.6,280.3L438.7,280.8L438.8,284.2L441,282L444.7,283.2L449.5,285.2L450.9,287.2L450.5,289L453.9,288L459.5,289.8L463.9,289.7L468.2,292.4L471.9,296.2L474.2,297.2L476.7,297.3L477.7,298.4L478.8,302.7L479.3,304.7L478.3,310.3L476.9,312.4L473,317.1L471.2,320.9L469.2,323.9L468.5,323.9L467.8,326.4L468.3,332.7L467.8,337.9L467.6,340.2L466.8,341.5L466.5,346L463.9,350.4L463.7,353.9L461.5,355.4L461,357.4L457.9,357.4L453.6,358.7L451.7,360.2L448.6,361.2L445.6,363.9L443.5,367.2L443.4,369.8L444,371.6L443.9,375L443.5,376.7L441.7,378.6L439.4,384.5L437.3,387.2L435.7,388.8L434.9,392L433.4,393.9L432.5,396.1L429.7,397.9L427.6,397.3L426.2,397.6L423.4,396.2L421.5,396.3L419.6,394.4L419.7,396.2L423.6,399.1L423.7,401.4L425.6,402.9L425.8,404.5L424,408.8L420.3,410.7L415.1,411.4L412.1,411L413,413L413,415.5L413.9,417.2L412.6,418.4L409.9,418.9L407.1,417.6L406.3,418.5L407.4,421.9L409.5,422.9L410.7,421.8L411.9,423.5L409.7,424.6L408.1,426.6L408.6,430L408.4,431.8L405.9,431.8L404.3,433.5L404.3,436L407.5,438.4L410.2,439L410.2,442L407.7,443.8L407.2,447.7L405.3,449L404.7,450.5L406.7,453.8L409,455.7L407.8,455.5L405.6,455.5L404.7,456.3L402.8,457.5L403.5,460.4L402.5,460.5L399.3,459.5L395.6,457.2L391.8,455.4L390.3,453.4L390.3,451.5L388.2,449.3L386,443.8L386,440.6L387.9,438.1L383.7,437.1L385.3,434.2L384.5,428.7L387.7,429.8L387.2,422.9L385.2,422.1L385.5,426.2L383.7,425.8L383.2,421L382.4,414.8L383.1,412.5L381.5,409.2L380.4,405.4L381.5,405.3L381.9,399.8L382.7,394.4L382.8,389.4L381.2,384.3L381.5,381.5L380.4,377.3L381.4,373.2L380.9,366.6L380.8,359.6L380.7,352.1L379.8,346.5L378.7,341.8L375.6,339.8L375.2,338.4L369.2,335.1L363.7,331.4L361.3,329.3L359.9,326.5L360.3,325.5L357.5,321.1L354.2,314.9L351.1,308.2L349.8,306.7L348.8,304.2L346.4,302L344.3,300.6L345.2,299.1L343.7,295.9L344.5,293.6L346.8,291.4L348.3,288.9L347.6,287.5L346.5,289L344.8,287.6L345.3,286.6L344.8,283.6L345.8,283L346.4,281L347.5,278.8L347.3,277.4L348.9,276.7L350.9,275.4L350.5,274.3L351.6,274.1L351.5,272.4L352.2,271.2L353.6,270.9L354.9,268.8L356,267.1L355,266.3L355.6,264.3L355,261.2L355.7,260.3L355.3,257.5L354.2,255.7L353.3,254.7L352.8,252.9L353.5,252L352.8,251.8L352.3,250.7L350.9,249.7L349.7,250L349,251.1L347.8,252L347.2,252.1L346.8,252.8L348.1,254.6L347.3,255.1L346.9,255.5L345.5,255.7L345.1,253.7L344.7,254.3L343.8,254.1L343.2,252.7L342.1,252.5L341.3,252.1L340.1,252.1L340,252.8L339.7,252.3L338.1,251.6L337.6,250.9L338,250.3L337.9,249.6L337.1,248.8L336,248.1L335.1,247.7L334.9,246.7L334.2,246.1L334.3,247.1L333.7,247.9L333.1,246.9L332.2,246.6L331.9,245.9L332,244.9L332.4,243.8L331.6,243.4L332.3,242.7L331.4,241.6L330.2,240.3L329.6,239.1L328.5,238.1L327.2,236.6L327.6,236L328,236.6L328.2,236.3L327.8,235.3L327,235L326.6,235.8L324.9,235.7L323.9,235.4L322.8,234.7L321.2,234.5L320.5,233.8L319.1,233.2L317.3,233.1L316,232.5L314.6,231.1L311.8,227.4L310.4,226.4L308.2,225.5L306.6,225.7L304.1,227L302.6,227.3L300.7,226.4L298.6,225.8L296.1,224.2L294,223.8L291,222.2L288.8,220.6L288.3,219.7L286.7,219.5L283.9,218.4L283,216.9L280.2,215L279.1,212.8L278.7,211.2L279.8,210.9L279.6,209.9L280.4,209L280.7,207.8L280,206.3L280,205L279.4,203.3L277.6,199.9L275.3,197.3L274.4,195.2L272.3,193.8L272,192.9L272.9,190.9L271.6,190.1L270.4,188.4L270.3,186.1L268.9,185.8L267.7,184L266.8,182.4L267,181.3L266.2,178.7L266,176.1L266.4,174.8L264.8,173.5L263.8,173.7L262.5,172.7L261.7,174.1L261.6,175.7L261.2,178.3L261.7,179.7L263.1,182L263.4,182.8L263.7,183L263.8,184.2L264.3,184.1L264.3,186.3L264.9,187.2L265.2,188.4L266.5,190.1L266.7,193.3L267.2,194.7L267.6,196.3L267.4,198.1L268.7,198.2L269.5,199.8L270.2,201.3L270,201.9L268.6,203.1L268.1,203.1L267.7,201.1L266.3,199.1L264.6,197.5L263.4,196.6L264.1,194.1L264.1,192.3L263,191.3L261.4,189.8L260.9,190.2L260.5,189.3L258.9,188.5L257.8,186.5L258.1,186.3L259.2,186.5L260.6,185.2L261.1,183.7L259.6,181.2L258.2,180.3L257.8,178.2L257.4,176L257,173.3L256.8,170.2L256.9,168.5L255.8,166.6L254.6,166.1L254.7,165.2L253.2,165L252.5,164.1L250.1,163.8L249.6,163.2L249.9,161.4L248.5,158L248.1,153.3L248.5,152.5L247.7,151.4L246.8,148.6L247.6,145.8L247,144L248.8,141.2L250,138.3L250.4,135.8L252.9,132.6L256.5,126.6L258.4,122.2L259.1,119.4L259.2,117.8L259.8,117.2L262.9,118.3L262.7,121.4L263.7,120.5L264.8,117.9L265.4,115.2L265,115.2L261.9,112L260.9,110.6L257.1,109.2L257.5,106.3L259.1,104.4L256.7,103L258,100.4L256.5,98.1L257.6,96.5L257,95.3L255.6,94.3L256.8,91.5L255.5,89L256.4,86L254.3,85.8L250.5,85.8L248.4,84.9L246,81.7L244.2,81.1L240.9,80L237.4,80.2L233.9,78.8L232.3,77.5L229.1,78.2L227.7,80.3L226.2,80.5L222.9,81.2L219.9,82.2L216.7,82.8L217.9,81L221.7,78L225,77.1L225.1,76.3L220.5,78L217.1,80.1L211.7,82.2L212.1,83.7L207.9,86L204.1,87.3L200.9,88.2L199.1,89.6L193.9,91.2L191.8,92.7L187.8,94.1L186.3,93.8L183.3,94.7L179.9,95.8L176.9,96.8L171.9,97.7L172,97.2L175.9,95.7L179.2,94.7L183.3,93L186.7,92.7L189,91.4L194,89.5L195.1,88.9L197.9,87.8L200.4,85.4L203.2,83.6L199.6,84.5L199.3,84L197,85.1L196.9,83.5L195.2,84.6L195.7,83.1L192.2,84.3L190.7,84.3L192.2,82.5L193.7,81.4L193.2,80.3L189.6,80.9L188.9,79.4L188,78.7L189.7,77L189.2,75.7L191.9,73.9L195.5,72.2L197.9,70.7L200,70.5L201.1,71L204.5,69.5L205.9,69.8L208.6,68.9L209.6,67.5L208.8,67L211.7,65.8L210.3,65.9L207.2,66.5L205.8,67.2L204.7,66.5L201.1,66.8L198.5,66.1L198.8,64.9L197.8,63.2L202.3,62L209,60.6L210.8,60.6L208.9,62L213.8,61.9L213.9,60.1L212.4,59L212.4,57.5L211.7,56.3L209.7,55.4L212.6,53.9L216.7,53.8L221,52.5L223.1,51.1L226.9,49.8L229.4,49.5L235,48.2L236.7,48.4L241.8,46.9L244.4,47.5L244.5,48.8L246.1,48.2L249.6,48.4L248.7,49L251.5,49.5L254.1,49.2L257.7,50.1L261.6,50.4L262.9,50.8L266.3,50.3L268.8,51.2L270.7,51.5L274.2,52.2L276.3,53.6L278.3,53.9L281.4,52.7L284.9,51.8L287.9,52.1L292.3,50.9L296.6,50.2L297,51.4L299.2,50.7L300.9,49.4L302.2,49.7L303.6,52.2L308.2,50.3L306.6,52.4L309.7,52L311.2,51.1L313.8,51.3L316.1,52.5L320.4,53.5L323,54L325.3,53.8L327.2,55.3L322.9,56.7L326.4,57.3L332.7,57L335,56.5L336.1,58.2L339.6,56.8L338.3,55.5L340.4,54.6L343.2,54.4L345.2,54.1L346.5,54.8L347.6,56.4L350.2,56.2L353.3,57.5L357,57L360.3,57.1L361.2,55.3L363.5,54.8L366.3,55.8L364.5,58.5L367.4,56.2L369.2,56.3L372.1,53.4L370.9,51.6L369.1,50.5L371.5,47.4L375.5,45.4L378,45.8L379.3,47L380.1,50.2L377.3,51.6ZM337.6,42.1L335.4,43.3L340.9,42.5L342.7,43.9L346.3,42.5L347.4,43.4L347,46.1L349,45L349.8,42.1L352,41.7L353.7,42.2L355.2,43.3L354.4,46L353.6,47.9L356.2,49.3L359.1,50.7L358,51.9L354.2,52.1L354.8,53.2L353.3,54.3L349.7,53.8L346.4,53.1L343.7,53.2L338.9,54.2L331.9,54.7L328.8,54.9L328.6,53.6L326.3,52.8L324,53.1L323.2,50.8L324.9,50.5L328.7,50.1L331.7,50.2L334.9,49.7L331.2,49L326.4,49.3L323.4,49.2L323.1,48.2L329.1,47.1L325.7,47.1L322.6,46.4L326.3,44.3L328.7,43.2L335.9,41.5ZM358.8,41.2L355.5,43L353.7,41.1L354.8,40.7L357.7,40.6ZM417.9,42.1L417.6,42.9L415.4,42.8L413.2,42.7L410.6,43.1L410.1,42.9L408.7,41.5L409.4,40.5L410.5,40.3L415.1,40.6ZM396.3,42L396.8,43.7L400.2,41.5L406.3,40.3L408.2,43.2L406.8,45L411.5,44.2L414.2,43.1L418.1,44.5L420.3,45.8L419.9,47L424.3,46.4L425.6,48.1L430.2,49.3L431.6,50.4L432.4,53L427.7,54.4L432,56.2L435.3,56.9L437.4,59.5L440.8,59.7L439.3,61.8L433.9,65.2L431.6,63.9L429.2,61.1L426.2,61.5L425.1,63.2L426.7,64.9L429.3,66.2L429.9,67L430.2,70L428.5,72.1L425.9,71.3L421.1,68.9L423.3,71.5L424.9,73.3L424.9,74.4L419,73.2L414.8,71.4L412.6,70L413.8,69.1L411.1,67.6L408.4,66.1L408.1,67L401.2,67.5L399.7,66.5L402.4,64.3L406.7,64.2L411.5,63.9L411.3,62.8L412.8,61.3L417.1,58.5L417.1,57.2L416.8,56.2L414.1,54.8L410.1,53.9L411.9,53.2L410.6,51.4L408.7,51.2L407.5,50.3L405.9,51.1L401.7,51.5L394.1,50.8L390,50L386.7,49.6L385.6,48.6L388.7,47.3L385.6,47.3L386.8,44.5L390.1,42L393.1,40.9L399,40.2ZM368.5,40.1L370.5,40.7L374.6,40.3L374.5,41.1L371.6,42.4L373.9,43.6L371.7,46.1L367.4,47.2L365.5,46.9L364.8,45.9L361.1,43.7L361.8,42.8L365.9,43.2L364.9,41.4ZM884.6,41.8L881.4,41.8L876.7,41.5L876.2,41.4L877,40.3L879.4,40L883.6,41.1ZM381.4,43L377.7,45.1L375.3,45L375.7,42.5L376.8,41.2L378.8,40L381.4,39.3L385.7,39.4L389.3,40L384.4,42.5ZM319.9,46.8L313,48.2L312.9,47L309.3,45.5L310.9,44.6L314.8,42.3L318.3,40.5L317.9,38.9L325.4,38.5L327.9,39L333.1,39.2L334.4,39.9L335.6,41.1L332.3,41.8L325.4,43.7L321,45.6ZM893.7,36.8L892.5,37.8L888.9,37.6L883.8,36.5L883.2,35.7L887.6,36.1ZM385,37L383.1,38.1L380.2,37.9L378.2,37.2L380.3,36L383.8,35.3L384.9,36.2ZM880.4,35.5L881.1,37.5L873.3,37.4L870.6,38L864.5,36.3L863.5,34.5L865.6,34L871.2,34.1ZM378.6,32.5L379.2,33.7L378.1,35L375.6,37L371.9,37.3L370,36.8L371.4,35.3L367.8,35.5L369.4,33.5L371.6,33.5L375.4,32.7L378.2,32.8ZM357.5,33.8L357.5,34.7L359.7,34.3L361.7,34.4L361,35.7L358.6,37L351.2,37.4L344.9,38.5L341.6,38.6L342.1,37.7L347.6,36.6L337.9,36.9L335.4,36.4L340.8,33.8L343.4,33.1L348.4,34L350.5,35.5L354,35.7L353.4,33.2L356.2,32.3L358,32.6ZM705,48.7L703.8,48.9L696.6,48.6L695.5,47.3L691.3,46.6L690.4,45.1L692.4,44.5L691.7,43L695,40.7L692.9,40.3L696.9,38L695.8,36.8L699.7,35.4L705.7,33.7L712.3,33.2L715.2,32.2L719,31.9L721,32.9L720.1,33.7L713.6,35L707.9,36.3L702.7,38.8L700.7,41.5L698.5,44.1L699.9,46.4ZM387.3,31.5L388.8,32.3L392.9,32.3L393.9,33.2L392.7,34.1L394.6,34.7L395.5,35.4L398.2,35.5L401,35.7L404.7,35.1L409.1,34.9L412.3,35.1L413.9,36.1L413.6,37.2L411.8,37.9L408.3,38.5L405.9,38.1L399.6,38.6L395.2,38.6L392.1,38.3L387.2,37.4L387.6,36L388.4,34.6L387.2,33.5L383.2,33.2L381.5,32.4L383.2,31.3ZM344.9,30.1L342.6,32.1L340.1,33L338,33.1L333.1,34.2L329.4,34.6L327.2,34L332.7,32.1L338.7,30.4L341.8,30.5ZM389.9,30.4L388.9,30.5L385.3,30.3L385.3,29.6L389.4,29.7L390.4,30.1ZM357.2,30L352.7,30.7L350.6,29.9L353,29.1L356.3,28.8L358.7,29.2ZM629.9,29.6L625.6,30.6L621.9,30L623.2,29.4L621.8,28.6L625.9,28.1L626.9,29ZM360.7,27.7L357.7,28.2L354.4,28.2L354.8,27.8L357.7,27.1L358.6,27.2ZM387.1,29.1L383.6,29.6L382.5,29L382.5,28.1L383.4,27L385.9,27.1L386.9,27.3L388.4,28.2ZM379.2,28.4L379,29.4L376,29.2L373.4,28.3L369.1,28.3L371.8,27.5L370,26.9L370.8,26L374.4,26.3L378.8,27.2ZM790.9,28.4L780.5,29.4L781,26.2L782.3,25.9L784,26L790.5,27.4ZM616,25L622.9,26.8L618.1,27.8L617.3,29.6L615.6,30.1L615,32.2L612.5,32.3L607.9,30.8L609.6,29.9L606.5,29.1L602.4,27.1L600.6,25.2L605.9,24.3L607.1,25.1L609.9,25.1L610.5,24.3L613.4,24.2ZM629.7,23.4L633.8,24.2L631.3,25.5L625.6,25.8L619.7,25.4L619.2,24.7L616.4,24.7L614,23.6L619.9,22.9L622.9,23.5L624.7,22.8ZM679.8,23L677.3,23.3L675.7,23.5L675.6,23.9L673.5,24.3L671.1,23.7L671.8,23L667.5,22.9L671,22.5L674,22.5L674.7,23.1L675.5,22.6L677.1,22.2L680.3,22.7ZM779.2,27L775.2,27.3L768.9,26.6L764.7,25.7L761.5,24L758.4,23.5L761.8,21.9L765.4,21.4L770.5,22.6L777.5,24.8ZM408.2,25.1L409.9,25.9L406.5,26.6L401.2,28.5L397.5,28.7L393.7,28.3L392.4,27.3L393.3,26.5L395.5,25.8L391.8,25.8L390.5,25L390.3,23.9L392.8,22.9L394.9,22.2L397.1,22L396.8,21.5L401.4,21.4L402.6,22.6L405.4,23.1L408.1,23.6ZM451.3,17.4L456.1,17.6L459.9,17.9L462.9,18.4L462.3,19L456.9,19.9L451.9,20.4L449.7,20.9L453.9,20.9L448.3,22.2L444.6,22.9L439.7,24.8L435.4,25.2L433.7,25.7L427.5,25.9L430,26.2L428.3,26.7L429.1,27.9L426.5,28.7L422.9,29.5L421.2,30.5L417.8,31.2L417.7,31.8L421.3,31.7L420.9,32.3L414.3,33.9L409.5,33.2L403.1,33.6L400.3,33.2L396.5,33.1L397.3,31.9L401.5,31.3L402,29.5L403.4,29.3L407.9,30.4L406.4,28.8L403.6,28.3L406,27.3L410.1,26.7L411.4,25.9L409.4,24.9L409.7,23.7L415,23.8L416.3,24.1L420.1,23.2L416,23L409,23.1L406.4,22.3L405.7,21.4L404.2,20.7L404.6,20L408,19.6L410.3,19.5L414.4,19.2L418.2,18.4L420.4,18.5L421.7,19.1L424.5,17.9L427.4,17.6L431,17.4L436.9,17.3L437.6,17.5L443.4,17.2L447.3,17.3ZM529.4,16.6L540.6,18.2L536.8,19L529.5,19.1L519.2,19.3L520,19.7L526.9,19.5L532.4,20.2L536.3,19.6L537.6,20.3L535.2,21.7L540.3,20.8L549.8,20L555.5,20.4L556.4,21.3L548.2,23L547,23.5L540.7,23.9L545.2,24L542.6,25.8L540.7,27.3L540.2,30.1L542.3,31.8L539.1,31.9L535.6,32.7L539.2,34.1L539.3,36.3L537,36.6L539.4,38.9L534.7,39.1L536.9,40.2L536.1,41.1L533,41.5L530.1,41.5L532.4,43.4L532.2,44.6L528.2,43.5L527,44.2L529.7,44.9L532.2,46.6L532.7,48.9L528.7,49.4L527.3,48.3L524.9,46.7L525.3,48.6L522.4,50.1L528.2,50.2L531.2,50.4L524.9,52.8L518.4,55.1L511.7,56.1L509.3,56.1L506.7,57.2L502.9,60.3L497.6,62.3L496,62.4L492.8,63.2L489.3,63.8L486.9,65.7L486.3,67.7L484.6,69.7L480.2,72.1L480.5,74.5L478.8,77L476.8,79.9L473.5,80.1L470.6,77.6L465.9,77.6L464.1,76L463.4,73L460.6,69.3L460.1,67.3L460.6,64.7L458.4,62L460,59.8L458.9,58.8L462.3,55.4L466.1,54.3L467.4,53.2L468.6,50.9L465.8,51.9L464.4,52.4L462.3,52.8L459.9,51.8L460.5,49.9L462,48.4L464,48.4L468.2,49.1L465.1,47.3L463.6,46.4L461.3,46.8L459.7,46.1L463.2,43.5L462.3,42.5L461.5,40.6L460.2,37.8L458.1,36.7L458.7,35.6L453.9,34.1L449.6,33.9L444.1,34L438.9,34.2L437,33.4L434.5,31.7L440.4,30.9L444.5,30.8L436.3,30.1L432.4,29.1L433.4,28.1L441.8,26.9L449.9,25.8L451.2,24.9L446.5,24L448.9,23.1L456.9,21.5L459.9,21.3L459.8,20.3L464.8,19.7L471,19.4L476.8,19.3L478.4,20L484.3,18.8L488.3,19.6L490.9,19.8L494.5,20.5L490.6,19.3L491.5,18.4L498.6,17.2L505.1,17.3L507.9,16.5L514.6,16.3Z", "sphere": "M292.1,8L580,8L867.9,8L892.3,10.5L911.1,15L926.3,20.7L939.4,27.3L962.1,42L982.8,57.9L1002.2,74.5L1020.2,91.9L1036.6,109.9L1051.2,128.3L1063.8,147.1L1074.6,166.1L1083.5,185.2L1090.7,204.2L1096.1,223.2L1100,242.2L1102.3,261.1L1103.1,280L1102.3,298.9L1100,317.8L1096.1,336.8L1090.7,355.8L1083.5,374.8L1074.6,393.9L1063.8,412.9L1051.2,431.7L1036.6,450.1L1020.2,468.1L1002.2,485.5L982.8,502.1L962.1,518L939.4,532.7L926.3,539.3L911.1,545L892.3,549.5L867.9,552L580,552L292.1,552L267.7,549.5L248.9,545L233.7,539.3L220.6,532.7L197.9,518L177.2,502.1L157.8,485.5L139.8,468.1L123.4,450.1L108.8,431.7L96.2,412.9L85.4,393.9L76.5,374.8L69.3,355.8L63.9,336.8L60,317.8L57.7,298.9L56.9,280L57.7,261.1L60,242.2L63.9,223.2L69.3,204.2L76.5,185.2L85.4,166.1L96.2,147.1L108.8,128.3L123.4,109.9L139.8,91.9L157.8,74.5L177.2,57.9L197.9,42L220.6,27.3L233.7,20.7L248.9,15L267.7,10.5L292.1,8Z", "pts": {"Євразія": [796, 112], "Африка": [638, 263], "Північна Америка": [318, 128], "Південна Америка": [407, 330], "Австралія": [970, 361], "Антарктида": [620, 522], "Тихий": [145, 297], "Атлантичний": [467, 196], "Індійський": [778, 391], "Північний Льодовитий": [599, 44]}};
+async function era3(){
+  setBg('era3'); clearFx(); hud(true); buildHud();
+  show('murko', {img:'murko_surprised', x:470, y:905, h:390, from:470});
+  show('byte', {x:800, y:910, h:340, from:800});
+  await sleep(800);
+  await say('murko', 'Скільки креслень! А під стелею — дерев’яні крила!', {emo:'murko_surprised'});
+  await say('byte', 'Ми в <i>XV–XVI століттях</i> — добі Відродження і великих географічних відкриттів. Митці малюють, винахідники креслять, а мореплавці відкривають нові землі!');
+  show('leona', {x:1480, y:920, h:470, from:1480});
+  await sleep(700);
+  await say('leona', 'Вітаю! Я — Леона: малюю картини, креслю літальні машини і мрію про далекі землі.');
+  await say('leona', 'Але моя карта світу зіпсувалася — без неї жоден корабель не вирушить! Допоможете — і <i>Ядро відкриттів</i> ваше.');
+  await mapTask();
+  await oceanQuiz();
+  await say('leona', 'Тепер карта готова! А мій корабель уже чекає в гавані.');
+  await shipTask();
+  await say('leona', 'Ви — справжні штурмани! Так і мореплавці колись прокладали шлях за компасом.');
+  await say('leona', 'Ядро ваше! А хто хоче — допоможіть мені розрахувати нове вітрило.', {noNext:true});
+  const pick = await chooseAny(['Допомогти з вітрилом', 'Пропустити']);
+  if(pick !== 'Пропустити') await sailTask();
+  await giveCore(2, 'leona', 'Тримайте <i>Ядро відкриттів</i>! Нехай у вас завжди буде сміливість відкривати нове.');
+  emo('murko', 'murko_happy');
+  await fragment(3, '<b>Тихим</b> океан назвав мореплавець Фернан Магеллан — під час його кругосвітньої подорожі вода була спокійною. Хоча насправді це <b>найглибший</b> і найбурхливіший океан, і за площею він більший за весь суходіл Землі.');
+  hideDialog();
+  await sleep(400);
+  await hologram(3, {left:1090, top:190, whisper:'…ти на правильному шляху…', wx:620, wy:120});
+  await say('murko', 'Тінь знову тут! Тепер видно цілого кота… А в лапі щось кругле — наче годинник, зовсім як мій!', {emo:'murko_surprised'});
+  await say('byte', 'Тінь кота з годинником… Хто ж це може бути? Повертаймося в Архів — там розберемося!');
+  hideDialog();
+  await fadeTo(() => { clearActors(); clearFx(); run(hallReturn); });
+}
+
+/* ---- 3.1 карта світу ---- */
+const GEO = [
+  ['Євразія', 0, 'Найбільший материк — на ньому живемо і ми.'],
+  ['Африка', 0, 'Материк на південь від Європи; екватор перетинає його посередині.'],
+  ['Північна Америка', 0, 'Ліворуч угорі, за Атлантичним океаном від Європи.'],
+  ['Південна Америка', 0, 'Під Північною Америкою, з’єднана з нею вузьким перешийком.'],
+  ['Австралія', 0, 'Найменший материк — праворуч унизу.'],
+  ['Антарктида', 0, 'Найхолодніший материк — у самому низу, біля Південного полюса.'],
+  ['Тихий', 1, 'Найбільший океан — між Америками та Євразією з Австралією.'],
+  ['Атлантичний', 1, 'Між Америками та Європою з Африкою.'],
+  ['Індійський', 1, 'Між Африкою, Євразією та Австралією.'],
+  ['Північний Льодовитий', 1, 'Найменший і найхолодніший океан — на півночі.']
+];
+async function mapTask(){
+  const p = panel('Я досліджую світ', 'Карта світу Леони');
+  const zones = shuffle(GEO.map((g, i) => i));
+  let html = `<svg class="wmap" viewBox="0 0 ${WMAP.W} ${WMAP.H}"><path d="${WMAP.sphere}" fill="#bfe3ea" stroke="#5a8fa0" stroke-width="3"/><path d="${WMAP.land}" fill="#ead6a3" stroke="#8a6224" stroke-width="1.5"/></svg>`;
+  GEO.forEach(([name], i) => { const [x, y] = WMAP.pts[name]; html += `<div class="wzone" data-i="${i}" style="left:${120 + x}px;top:${88 + y}px">?</div>`; });
+  html += '<div class="chips" style="top:664px">' + shuffle(GEO.map((g, i) => i)).map(i => `<button class="chip${GEO[i][1] ? ' ocean' : ''}" data-i="${i}">${GEO[i][0]}${GEO[i][1] ? ' океан' : ''}</button>`).join('') + '</div>';
+  p.insertAdjacentHTML('beforeend', html);
+  await say('leona', 'Натисніть на назву внизу, а потім — на знак <i>?</i> на карті, де цей материк чи океан. Коричневі — материки, сині — океани.', {noNext:true});
+  await cancellable(res => {
+    let sel = null, done = 0;
+    p.onclick = e => {
+      const c = e.target.closest('.chip'), z = e.target.closest('.wzone');
+      if(c){ p.querySelectorAll('.chip').forEach(x => x.classList.remove('sel')); c.classList.add('sel'); sel = +c.dataset.i; return; }
+      if(z){
+        if(sel === null){ textEl.innerHTML = 'Спочатку оберіть <i>назву</i> внизу.'; return; }
+        const zi = +z.dataset.i, g = GEO[sel];
+        if(zi === sel){
+          const lab = document.createElement('div'); lab.className = 'wlabel' + (g[1] ? ' ocean' : '');
+          lab.textContent = g[0] + (g[1] ? ' океан' : ''); lab.style.left = z.style.left; lab.style.top = z.style.top;
+          z.remove(); p.append(lab);
+          p.querySelector(`.chip[data-i="${sel}"]`).classList.add('used');
+          textEl.innerHTML = `Так! ${g[0]}${g[1] ? ' океан' : ''}.`; sel = null; done++;
+          if(done === GEO.length){ textEl.innerHTML = 'Усі материки й океани на своїх місцях!'; p.onclick = null; setTimeout(res, 1500); }
+        } else {
+          z.classList.remove('no'); void z.offsetWidth; z.classList.add('no'); setTimeout(() => z.classList.remove('no'), 600);
+          textEl.innerHTML = `Не тут… Підказка: ${g[2]}`;
+        }
+      }
+    };
+  });
+  closePanel();
+}
+async function oceanQuiz(){
+  const O = ['Тихий', 'Атлантичний', 'Індійський', 'Північний Льодовитий'];
+  const Q = [
+    ['Який океан <i>найбільший</i>?', 'Тихий'],
+    ['Який океан <i>найменший і найхолодніший</i>?', 'Північний Льодовитий'],
+    ['У якому океані <i>найтепліша</i> вода?', 'Індійський'],
+    ['Який океан <i>другий</i> за площею?', 'Атлантичний']
+  ];
+  await say('leona', 'А тепер — питання справжнім мореплавцям!');
+  for(const [q, a] of Q){
+    await say('leona', q, {noNext:true});
+    await choose(O, a, () => { textEl.innerHTML = q + ' Подумайте ще!'; });
+  }
+}
+
+/* ---- 3.2 курс каравели ---- */
+const REEFS = [[3,5],[4,4],[3,3],[0,2],[1,1],[4,1],[5,4]], START = [0,5], ISLAND = [5,2];
+const DIRS = {'Північ':[0,-1,'↑'], 'Південь':[0,1,'↓'], 'Схід':[1,0,'→'], 'Захід':[-1,0,'←']};
+async function shipTask(){
+  const p = panel('Інформатика · сторони горизонту', 'Курс каравели');
+  const C = 90;
+  let g = '<div class="sea">';
+  for(let y = 0; y < 6; y++) for(let x = 0; x < 6; x++) g += `<div class="cell" style="left:${x*C}px;top:${y*C}px"></div>`;
+  g += `<svg width="540" height="540" viewBox="0 0 540 540">`;
+  REEFS.forEach(([x, y]) => { const cx = x*C + 45, cy = y*C + 50; g += `<g><ellipse cx="${cx}" cy="${cy+18}" rx="38" ry="12" fill="#5fa8c4"/><path d="M${cx-30} ${cy+18} L${cx-18} ${cy-14} L${cx-4} ${cy+2} L${cx+8} ${cy-22} L${cx+30} ${cy+18} Z" fill="#7b7468" stroke="#4a443b" stroke-width="3"/></g>`; });
+  { const cx = ISLAND[0]*C + 45, cy = ISLAND[1]*C + 50; g += `<ellipse cx="${cx}" cy="${cy+16}" rx="42" ry="20" fill="#f3d98b" stroke="#c9a54a" stroke-width="3"/><path d="M${cx} ${cy+14} Q${cx+4} ${cy-12} ${cx-2} ${cy-30}" stroke="#7a5320" stroke-width="6" fill="none"/><path d="M${cx-2} ${cy-30} q-24 -6 -32 8 M${cx-2} ${cy-30} q22 -10 32 4 M${cx-2} ${cy-30} q-6 -22 -20 -24 M${cx-2} ${cy-30} q14 -20 26 -16" stroke="#3f8a3a" stroke-width="7" fill="none" stroke-linecap="round"/>`; }
+  g += `</svg><svg class="ship" viewBox="0 0 90 90"><path d="M14 56 L76 56 L66 74 L24 74 Z" fill="#8a5a2b" stroke="#4a2f14" stroke-width="3"/><line x1="45" y1="14" x2="45" y2="58" stroke="#4a2f14" stroke-width="4"/><path d="M47 16 Q70 30 47 50 Z" fill="#fffaf0" stroke="#8a6224" stroke-width="2"/><path d="M43 20 Q24 32 43 50 Z" fill="#f6e8c8" stroke="#8a6224" stroke-width="2"/><path d="M45 14 l12 4 l-12 4 z" fill="#c0392b"/></svg></div>`;
+  g += `<svg class="compass" viewBox="-125 -125 250 250"><circle r="80" fill="#fffaf0" stroke="#8a6224" stroke-width="4"/><path d="M0 -62 L12 0 L0 62 L-12 0 Z" fill="#c0392b"/><path d="M0 -62 L12 0 L0 0 Z" fill="#7a1f12"/><path d="M-62 0 L0 -12 L62 0 L0 12 Z" fill="#3b2412" opacity=".8"/><text y="-88" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="30" fill="#3b2412">Пн</text><text y="112" text-anchor="middle" font-family="Nunito" font-weight="800" font-size="30" fill="#3b2412">Пд</text><text x="84" y="10" text-anchor="start" font-family="Nunito" font-weight="800" font-size="30" fill="#3b2412">Сх</text><text x="-84" y="10" text-anchor="end" font-family="Nunito" font-weight="800" font-size="30" fill="#3b2412">Зх</text></svg>`;
+  g += '<div class="cmds">' + Object.entries(DIRS).map(([k, v]) => `<button class="ch" data-d="${k}">${v[2]} ${k}</button>`).join('') + '</div>';
+  g += '<div class="prog"><span class="empty">Програма порожня…</span></div><div class="pbtns"><button class="del">Стерти крок</button><button class="clr">Очистити</button><button class="go">Пуск ▶</button></div>';
+  p.insertAdjacentHTML('beforeend', g);
+  const ship = p.querySelector('.ship'), prog = p.querySelector('.prog');
+  const place = ([x, y]) => { ship.style.left = x*C + 'px'; ship.style.top = y*C + 'px'; };
+  place(START);
+  let cmds = [], busy = false;
+  const render = () => { prog.innerHTML = cmds.length ? cmds.map((d, i) => `<span class="step" data-i="${i}">${DIRS[d][2]} ${d}</span>`).join('') : '<span class="empty">Програма порожня…</span>'; };
+  await say('leona', 'Складіть програму для корабля: кожна кнопка — <i>одна клітинка</i> в бік світу. Обминіть рифи й допливіть до острова з пальмою! Потім натисніть «Пуск».', {noNext:true});
+  await cancellable(res => {
+    p.onclick = async e => {
+      if(busy) return;
+      const b = e.target.closest('button'); if(!b) return;
+      if(b.dataset.d){ if(cmds.length < 20){ cmds.push(b.dataset.d); render(); } return; }
+      if(b.classList.contains('del')){ cmds.pop(); render(); return; }
+      if(b.classList.contains('clr')){ cmds = []; render(); place(START); return; }
+      if(b.classList.contains('go')){
+        if(!cmds.length){ textEl.innerHTML = 'Спочатку додайте кроки програми.'; return; }
+        busy = true; place(START); await new Promise(r => setTimeout(r, 300));
+        let [x, y] = START, fail = null;
+        for(let i = 0; i < cmds.length; i++){
+          prog.querySelectorAll('.step').forEach((s, k) => s.classList.toggle('run', k === i));
+          const [dx, dy] = DIRS[cmds[i]]; x += dx; y += dy;
+          if(x < 0 || y < 0 || x > 5 || y > 5){ fail = 'Корабель запливе за край карти!'; break; }
+          place([x, y]); await new Promise(r => setTimeout(r, 520));
+          if(REEFS.some(([rx, ry]) => rx === x && ry === y)){ fail = `Бум! Крок ${i + 1} — корабель налетів на риф.`; break; }
+          if(x === ISLAND[0] && y === ISLAND[1]){ textEl.innerHTML = 'Земля! Корабель доплив до острова!'; p.onclick = null; setTimeout(res, 1600); return; }
+        }
+        textEl.innerHTML = (fail || 'Програма закінчилась, а до острова ще не допливли.') + ' Виправте програму і спробуйте ще раз!';
+        setTimeout(() => { place(START); prog.querySelectorAll('.step').forEach(s => s.classList.remove('run')); busy = false; }, 900);
+      }
+    };
+  });
+  closePanel();
+}
+
+/* ---- 3.3 вітрило ---- */
+async function sailTask(){
+  const p = panel('Математика · бонус', 'Креслення вітрила', true);
+  p.insertAdjacentHTML('beforeend', `<svg viewBox="0 0 900 520" style="position:absolute;left:250px;top:120px;width:900px;height:520px">
+    <rect x="260" y="70" width="400" height="300" fill="#fffaf0" stroke="#3b2412" stroke-width="5"/>
+    <path d="M260 70 Q460 130 660 70 M260 370 Q460 330 660 370" stroke="#c9a86a" stroke-width="3" fill="none" stroke-dasharray="10 8"/>
+    <line x1="260" y1="410" x2="660" y2="410" stroke="#8a3c12" stroke-width="4"/><path d="M260 400 v20 M660 400 v20" stroke="#8a3c12" stroke-width="4"/>
+    <text x="460" y="455" text-anchor="middle" font-family="Comfortaa" font-weight="700" font-size="44" fill="#8a3c12">4 м</text>
+    <line x1="700" y1="70" x2="700" y2="370" stroke="#8a3c12" stroke-width="4"/><path d="M690 70 h20 M690 370 h20" stroke="#8a3c12" stroke-width="4"/>
+    <text x="725" y="235" font-family="Comfortaa" font-weight="700" font-size="44" fill="#8a3c12">3 м</text>
+    <text x="460" y="230" text-anchor="middle" font-family="Comfortaa" font-weight="700" font-size="34" fill="#b58a46">вітрило</text></svg>`);
+  await say('leona', 'Вітрило — прямокутник <i>4 м</i> на <i>3 м</i>. Скільки метрів мотузки треба, щоб обшити його по краю? Тобто який <i>периметр</i>?', {noNext:true});
+  await choose(['7 м', '12 м', '14 м'], '14 м', () => { textEl.innerHTML = 'Периметр — сума <i>всіх</i> сторін: 4 + 3 + 4 + 3.'; });
+  await say('leona', 'Правильно: (4 + 3) × 2 = 14 м. А скільки <i>квадратних метрів</i> тканини піде на вітрило — яка його <i>площа</i>?', {noNext:true});
+  await choose(['7 кв. м', '12 кв. м', '14 кв. м'], '12 кв. м', () => { textEl.innerHTML = 'Площа прямокутника — довжина × ширина: 4 × 3.'; });
+  closePanel();
+  await say('leona', 'Так! 4 × 3 = 12 кв. м. Тепер вітрило вийде якраз!');
+}
+
+
+/* ================== ЕПОХА 4. Доба винаходів ================== */
+const LOCO_SVG = `<svg viewBox="0 0 200 120"><rect x="20" y="40" width="110" height="46" rx="10" fill="#b8862f" stroke="#3b2412" stroke-width="4"/><rect x="120" y="20" width="58" height="66" rx="6" fill="#8a3c12" stroke="#3b2412" stroke-width="4"/><rect x="132" y="30" width="34" height="24" rx="4" fill="#ffe08a" stroke="#3b2412" stroke-width="3"/><rect x="40" y="10" width="20" height="32" fill="#3b2412"/><path d="M34 10 h32 l-4 -8 h-24 z" fill="#3b2412"/><path d="M8 86 L20 60 L20 86 Z" fill="#3b2412"/><circle cx="50" cy="94" r="18" fill="#3b2412"/><circle cx="50" cy="94" r="8" fill="#b8862f"/><circle cx="100" cy="94" r="18" fill="#3b2412"/><circle cx="100" cy="94" r="8" fill="#b8862f"/><circle cx="155" cy="96" r="14" fill="#3b2412"/><circle cx="155" cy="96" r="6" fill="#b8862f"/><line x1="50" y1="94" x2="100" y2="94" stroke="#c9952f" stroke-width="6"/><circle cx="54" cy="-6" r="10" fill="#fff" opacity=".7"/></svg>`;
+async function era4(){
+  setBg('era4'); clearFx(); hud(true); buildHud();
+  show('murko', {img:'murko_surprised', x:430, y:905, h:390, from:430});
+  show('byte', {x:760, y:910, h:340, from:760});
+  await sleep(800);
+  await say('murko', 'Ух ти, справжній паровоз! А скільки пари — пф-пф!', {emo:'murko_surprised'});
+  await say('byte', 'Ми в <i>XIX–XX століттях</i> — добі великих винаходів. Паровози, електричні лампи, телефон, перші літаки — усе це з’явилося саме тоді!');
+  show('iskra', {x:1460, y:925, h:470, from:1460});
+  await sleep(700);
+  await say('iskra', 'Пф-пф! Вітаю, пасажири! Я — Іскра, інженерка і машиністка цього паровоза.');
+  await say('iskra', 'Мій паровоз везе <i>Ядро енергії</i>, але розклад поїздів зламався! Допоможете його полагодити?');
+  await speedTask();
+  await say('iskra', 'Розклад знову працює! А тепер — мій музей винаходів. Глітч часу переплутав усі експонати!');
+  await timelineTask();
+  await say('iskra', 'Ось так за якихось 150 років люди пересіли з паровоза… аж у космос!');
+  await say('iskra', 'Ядро ваше! А якщо хочете — зазирніть у механізм паровоза. Там є хитра загадка.', {noNext:true});
+  const pick = await chooseAny(['Зазирнути в механізм', 'Пропустити']);
+  if(pick !== 'Пропустити') await gearsTask();
+  await giveCore(3, 'iskra', 'Тримайте <i>Ядро енергії</i>! Хай воно додає вам сил для нових відкриттів.');
+  emo('murko', 'murko_happy');
+  await fragment(4, '<b>Ігор Сікорський</b> народився в Києві і ще хлопчиком мріяв про літальні машини, начитавшись Жуля Верна. Згодом він створив <b>один із перших вдалих вертольотів</b>.');
+  hideDialog();
+  await sleep(400);
+  await hologram(4, {left:1010, top:160, whisper:'…залишилося одне…', wx:520, wy:150});
+  await say('murko', 'Ви бачили?! Тінь стала руда… і в неї <i>зелений шарф</i> — зовсім як у мене!', {emo:'murko_surprised'});
+  await say('byte', 'Здається, я починаю здогадуватися, хто це… Але спершу — останнє ядро. Повертаймося в Архів!');
+  hideDialog();
+  await fadeTo(() => { clearActors(); clearFx(); run(hallReturn); });
+}
+
+/* ---- 4.1 розклад паровоза ---- */
+async function speedTask(){
+  const p = panel('Математика', 'Розклад паровоза');
+  p.insertAdjacentHTML('beforeend', `<div class="trackbox"><div class="rail"></div><div class="loco" style="left:80px">${LOCO_SVG}</div></div>
+    <div class="qbig"></div>
+    <div class="formula"><span>відстань = швидкість × час</span><span>швидкість = відстань : час</span><span>час = відстань : швидкість</span></div>`);
+  const tb = p.querySelector('.trackbox'), loco = p.querySelector('.loco'), q = p.querySelector('.qbig');
+  const Q = [
+    {text:'Паровоз їде зі швидкістю <b>60 км/год</b>. Яку відстань він подолає за <b>5 год</b>?', opts:['65 км', '300 км', '12 км'], ok:'300 км', hint:'Відстань = швидкість × час: 60 × 5.', why:'60 × 5 = 300 км.', a:'А', b:'Б', d:'? км'},
+    {text:'До станції <b>240 км</b>, паровоз доїхав за <b>4 год</b>. З якою швидкістю він їхав?', opts:['60 км/год', '244 км/год', '960 км/год'], ok:'60 км/год', hint:'Швидкість = відстань : час: 240 : 4.', why:'240 : 4 = 60 км/год.', a:'Б', b:'В', d:'240 км'},
+    {text:'До вокзалу з Ядром енергії <b>180 км</b>, швидкість паровоза — <b>60 км/год</b>. Скільки часу триватиме поїздка?', opts:['3 год', '120 год', '30 год'], ok:'3 год', hint:'Час = відстань : швидкість: 180 : 60.', why:'180 : 60 = 3 год.', a:'В', b:'Вокзал', d:'180 км'}
+  ];
+  const W = 1240;
+  tb.insertAdjacentHTML('beforeend', `<div class="st" style="left:70px">Станція</div><div class="st" style="left:${W - 70}px">Станція</div><div class="dist" style="left:0;right:0"></div>`);
+  const dist = tb.querySelector('.dist'), sts = tb.querySelectorAll('.st');
+  await say('iskra', 'Підказка — формули внизу таблички. Читайте задачу і обирайте відповідь!');
+  for(let i = 0; i < Q.length; i++){
+    const t = Q[i];
+    loco.style.transition = 'none'; loco.style.left = '80px'; void loco.offsetWidth; loco.style.transition = '';
+    sts[0].textContent = 'Станція ' + t.a; sts[1].textContent = t.b === 'Вокзал' ? 'Вокзал' : 'Станція ' + t.b;
+    dist.textContent = '← ' + t.d + ' →';
+    q.innerHTML = `<b>Задача ${i + 1}.</b> ` + t.text;
+    await say('iskra', 'Оберіть відповідь:', {noNext:true});
+    await choose(shuffle(t.opts), t.ok, () => { textEl.innerHTML = 'Не зовсім… ' + t.hint; });
+    loco.style.left = (W - 290) + 'px'; dist.textContent = '← ' + t.d.replace('?', t.ok.split(' ')[0]) + ' →';
+    textEl.innerHTML = 'Так! ' + t.why; choicesEl.innerHTML = ''; talk('iskra');
+    await sleep(2600);
+  }
+  closePanel();
+}
+
+/* ---- 4.2 стрічка винаходів ---- */
+const INV = [
+  {nm:'Паровоз', yr:1804, svg:LOCO_SVG.replace('viewBox="0 0 200 120"', 'viewBox="0 -14 200 134"')},
+  {nm:'Телефон', yr:1876, svg:`<svg viewBox="0 0 150 120"><rect x="40" y="20" width="70" height="90" rx="8" fill="#8a5a2b" stroke="#3b2412" stroke-width="4"/><circle cx="75" cy="58" r="20" fill="#f6e8c8" stroke="#3b2412" stroke-width="3"/><circle cx="75" cy="58" r="5" fill="#3b2412"/><path d="M20 10 q55 -14 110 0 l-6 14 q-49 -10 -98 0 z" fill="#3b2412"/><rect x="14" y="4" width="22" height="26" rx="8" fill="#3b2412"/><rect x="114" y="4" width="22" height="26" rx="8" fill="#3b2412"/><path d="M110 90 q30 0 26 24" stroke="#3b2412" stroke-width="4" fill="none"/></svg>`},
+  {nm:'Літак братів Райт', yr:1903, svg:`<svg viewBox="0 0 150 120"><rect x="10" y="30" width="130" height="10" rx="3" fill="#f6e8c8" stroke="#3b2412" stroke-width="3"/><rect x="10" y="70" width="130" height="10" rx="3" fill="#f6e8c8" stroke="#3b2412" stroke-width="3"/><path d="M30 40 v30 M60 40 v30 M90 40 v30 M120 40 v30" stroke="#3b2412" stroke-width="3"/><rect x="62" y="52" width="26" height="12" rx="3" fill="#b8862f" stroke="#3b2412" stroke-width="2"/><path d="M140 55 h8 M4 45 l-4 20" stroke="#3b2412" stroke-width="3"/></svg>`},
+  {nm:'Вертоліт Сікорського', yr:1939, svg:`<svg viewBox="0 0 150 120"><path d="M10 22 h130" stroke="#3b2412" stroke-width="6" stroke-linecap="round"/><path d="M75 22 v16" stroke="#3b2412" stroke-width="5"/><ellipse cx="65" cy="62" rx="36" ry="26" fill="#c0392b" stroke="#3b2412" stroke-width="4"/><path d="M48 56 a18 14 0 0 1 30 -12 v18 h-30 z" fill="#d4eefc" stroke="#3b2412" stroke-width="3"/><path d="M100 60 h38 l6 -14" stroke="#3b2412" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M40 98 h56 M52 88 v10 M84 88 v10" stroke="#3b2412" stroke-width="4"/></svg>`},
+  {nm:'Перший супутник', yr:1957, svg:`<svg viewBox="0 0 150 120"><circle cx="70" cy="56" r="26" fill="#c9cfd6" stroke="#3b2412" stroke-width="4"/><path d="M60 46 a10 10 0 0 1 12 -6" stroke="#fff" stroke-width="4" fill="none"/><path d="M90 70 L146 104 M86 76 L120 116 M50 72 L8 112 M54 78 L30 118" stroke="#3b2412" stroke-width="3"/><circle cx="20" cy="18" r="3" fill="#b8862f"/><circle cx="128" cy="22" r="4" fill="#b8862f"/><circle cx="118" cy="56" r="2" fill="#b8862f"/></svg>`}
+];
+async function timelineTask(){
+  const p = panel('Я досліджую світ · математика', 'Музей винаходів');
+  const X = [200, 450, 700, 950, 1200];
+  let html = '<div class="rule" style="top:96px">Натискайте на винаходи <b>від найдавнішого до найновішого</b> — порівнюйте роки.</div><div class="tline"></div>';
+  X.forEach((x, i) => html += `<div class="tslot" style="left:${x}px"><div class="n">${i + 1}</div></div>`);
+  p.insertAdjacentHTML('beforeend', html);
+  p.querySelector('.tline').style.top = '178px';
+  p.querySelectorAll('.tslot').forEach(t => t.style.top = '230px');
+  const order = shuffle(INV.map((_, i) => i));
+  const cards = INV.map((v, i) => { const c = document.createElement('div'); c.className = 'icard'; c.dataset.i = i; c.innerHTML = `${v.svg}<div class="nm">${v.nm}</div><div class="yr">${v.yr}</div>`; p.append(c); return c; });
+  const home = () => order.forEach((ci, k) => { const c = cards[ci]; if(c.classList.contains('ok')) return; c.style.left = (X[k] - 115) + 'px'; c.style.top = '500px'; c.style.transform = `scale(.86) rotate(${(k % 2 ? 1 : -1) * 3}deg)`; });
+  home();
+  await say('iskra', 'Розставте експонати на стрічці часу — від найдавнішого до найновішого!', {noNext:true});
+  await cancellable(res => {
+    let next = 0;
+    p.onclick = e => {
+      const c = e.target.closest('.icard'); if(!c || c.classList.contains('ok')) return;
+      const i = +c.dataset.i;
+      if(i === next){
+        c.classList.add('ok'); c.style.transform = 'none'; c.style.left = (X[next] - 115) + 'px'; c.style.top = '230px';
+        p.querySelectorAll('.tslot')[next].classList.add('ok');
+        next++;
+        textEl.innerHTML = next < INV.length ? `Так! ${INV[i].nm} — ${INV[i].yr} рік. Що з’явилося далі?` : 'Усі винаходи на своїх місцях!';
+        if(next === INV.length){ p.onclick = null; setTimeout(res, 1600); }
+      } else {
+        c.classList.remove('bad'); void c.offsetWidth; c.classList.add('bad'); setTimeout(() => c.classList.remove('bad'), 600);
+        textEl.innerHTML = `${INV[i].yr} — це пізніше. Шукайте рік, <i>менший</i> за ${INV[i].yr}.`;
+      }
+    };
+  });
+  closePanel();
+}
+
+/* ---- 4.3 шестерні ---- */
+function gearPath(teeth, R, r){
+  let d = '';
+  const step = Math.PI * 2 / teeth;
+  for(let i = 0; i < teeth; i++){
+    const a = i * step, pts = [[a, r], [a + step * .15, R], [a + step * .45, R], [a + step * .6, r]];
+    pts.forEach(([ang, rad], k) => { const x = (rad * Math.sin(ang)).toFixed(1), y = (-rad * Math.cos(ang)).toFixed(1); d += (i === 0 && k === 0 ? 'M' : 'L') + x + ' ' + y + ' '; });
+  }
+  return d + 'Z';
+}
+async function gearsTask(){
+  const p = panel('Логіка · бонус', 'Шестерні паровоза', true);
+  const N = 5, R = 118, r = 98, cx0 = 160, gap = 240;
+  let g = `<svg class="gearsvg" viewBox="0 0 1280 430">`;
+  for(let i = 0; i < N; i++){
+    const cx = cx0 + i * gap, cy = i % 2 ? 250 : 190, col = i === 0 ? '#c9952f' : i === N - 1 ? '#c0392b' : '#9aa3ab';
+    g += `<g transform="translate(${cx} ${cy})"><g class="g ${i % 2 ? 'ccw' : 'cw'}" style="animation-delay:0s"><path d="${gearPath(12, R, r)}" fill="${col}" stroke="#3b2412" stroke-width="4" transform="rotate(${i % 2 ? 15 : 0})"/><circle r="34" fill="#fffaf0" stroke="#3b2412" stroke-width="4"/><circle r="10" fill="#3b2412"/></g>
+      <text y="${i % 2 ? 165 : -140}" text-anchor="middle" font-family="Comfortaa" font-weight="700" font-size="34" fill="#3b2412">${i + 1}</text></g>`;
+  }
+  g += `<path d="M ${cx0 - 70} 60 A 140 140 0 0 1 ${cx0 + 70} 60" stroke="#2f9e44" stroke-width="8" fill="none" marker-end="url(#ar)" transform="translate(0 10)"/><defs><marker id="ar" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#2f9e44"/></marker></defs></svg>`;
+  p.insertAdjacentHTML('beforeend', g + '<div class="rule" style="top:620px">Перша шестерня крутиться <b>за годинниковою стрілкою</b> (зелена стрілка).</div>');
+  await say('iskra', 'Шестерні зачеплені зубцями одна за одну. У який бік крутиться <i>п’ята</i>, червона шестерня?', {noNext:true});
+  await choose(['За годинниковою стрілкою', 'Проти годинникової стрілки'], 'За годинниковою стрілкою', () => { textEl.innerHTML = 'Підказка: сусідні шестерні завжди крутяться <i>в різні боки</i>. Перша — за стрілкою, друга — проти, третя…'; });
+  p.querySelector('.gearsvg').classList.add('spin');
+  textEl.innerHTML = 'Так! Сусідні шестерні крутяться в різні боки: 1 — за, 2 — проти, 3 — за, 4 — проти, <i>5 — за</i> годинниковою стрілкою.'; choicesEl.innerHTML = ''; talk('iskra');
+  await sleep(3800);
+  closePanel();
+}
+
+
+/* ================== ЕПОХА 5. Архів 3027 ================== */
+const st5 = {invention:'Наш винахід'};
+async function era5(){
+  setBg('corridor'); clearFx(); hud(true); buildHud();
+  show('murko', {img:'murko_thinking', x:520, y:900, h:390, from:520});
+  show('byte', {x:1400, y:905, h:360, from:1400});
+  await sleep(800);
+  await say('murko', 'Ми знову в 3027 році! Тільки це вже не зала, а якісь довгі коридори…', {emo:'murko_thinking'});
+  const ch = show('chron', {x:960, y:560, h:300, from:960, z:0}); ch.classList.add('holo', 'float');
+  await sleep(600);
+  await say('chron', 'Хранителі! Чотири ядра повернули мені голос. Але останнє, <i>Ядро уяви</i>, сховалося в серці Архіву.');
+  await say('chron', 'Туди веде лабіринт. Байт пройде його, якщо ви напишете для нього <i>програму</i>.');
+  await mazeTask();
+  await say('byte', 'Ура, я пройшов! Завдяки повторенню програма вийшла зовсім короткою.');
+  await say('chron', 'Перед серцем Архіву — ще одна перевірка. Хочете допомогти Байту знайти помилку в його алгоритмі?', {noNext:true});
+  const pick = await chooseAny(['Знайти помилку', 'Пропустити']);
+  if(pick !== 'Пропустити') await bugTask();
+  await say('chron', 'А тепер — найважливіше. У мої дані пробралися <i>фейки</i>! Допоможіть відділити правду від вигадки.');
+  await factTask();
+  await say('chron', 'Дані очищено! Залишилося останнє ядро. Воно запалюється не від правильних відповідей, а від <i>нових ідей</i>.');
+  await inventTask();
+  await giveCore(4, 'chron', 'Ваша ідея запалила <i>Ядро уяви</i>! Тепер усі п’ять ядер разом.');
+  emo('murko', 'murko_happy');
+  await fragment(5, 'Бібліотека Конгресу США — одна з найбільших у світі: у ній зберігаються <b>понад сто мільйонів</b> книжок, карт, записів і фотографій. Справжній архів людства існує вже сьогодні!');
+  hideDialog();
+  await say('byte', 'Швидше до головної зали — встановимо останнє ядро!');
+  hideDialog();
+  await fadeTo(() => { clearActors(); clearFx(); run(finale); });
+}
+
+/* ---- 5.1 лабіринт з повторенням ---- */
+const MAZE = {path:[[0,4],[0,3],[1,3],[1,2],[2,2],[2,1],[3,1],[3,0],[4,0]], start:[0,4], goal:[4,0]};
+const D5 = {'Вгору':[0,-1,'↑'], 'Вниз':[0,1,'↓'], 'Праворуч':[1,0,'→'], 'Ліворуч':[-1,0,'←']};
+async function mazeTask(){
+  const p = panel('Інформатика · повторення', 'Програма для Байта');
+  const C = 100, isPath = (x, y) => MAZE.path.some(([a, b]) => a === x && b === y);
+  let h = '<div class="lab">';
+  for(let y = 0; y < 5; y++) for(let x = 0; x < 5; x++) h += `<div class="c ${isPath(x, y) ? 'path' : 'wall'}" style="left:${x*C}px;top:${y*C}px"></div>`;
+  h += `<div class="goal" style="left:${MAZE.goal[0]*C}px;top:${MAZE.goal[1]*C}px"><img src="${IMG.core_violet}" alt=""></div><div class="bot"><img src="${IMG.byte}" alt=""></div></div>`;
+  h += `<div class="rep"><div class="hd">Повтори <button class="mn">−</button><span class="num">1</span><button class="pl">+</button> разів:</div><div class="body"></div></div>`;
+  h += '<div class="cmds5">' + Object.entries(D5).map(([k, v]) => `<button class="ch" data-d="${k}">${v[2]} ${k}</button>`).join('') + '</div>';
+  h += '<div class="pb5"><button class="del">Стерти крок</button><button class="clr">Очистити</button><button class="go">Пуск ▶</button></div>';
+  h += '<div class="rule" style="top:560px;left:620px;right:60px;text-align:left;font-size:27px">У рамку можна покласти <b>не більше 3 команд</b> — а повторити їх скільки завгодно разів.</div>';
+  p.insertAdjacentHTML('beforeend', h);
+  const bot = p.querySelector('.bot'), body = p.querySelector('.body'), num = p.querySelector('.num');
+  const place = ([x, y]) => { bot.style.left = x*C + 'px'; bot.style.top = y*C + 'px'; };
+  place(MAZE.start);
+  let cmds = [], n = 1, busy = false;
+  const render = () => { body.innerHTML = cmds.length ? cmds.map(d => `<span class="step">${D5[d][2]} ${d}</span>`).join('') : '<span class="empty">Покладіть сюди команди…</span>'; num.textContent = n; };
+  render();
+  await say('byte', 'Подивіться на коридор: він іде <i>сходинками</i>. Знайдіть, які кроки повторюються, покладіть їх у рамку «Повтори» і виберіть, скільки разів!', {noNext:true});
+  await cancellable(res => {
+    p.onclick = async e => {
+      if(busy) return;
+      const b = e.target.closest('button'); if(!b) return;
+      if(b.dataset.d){ if(cmds.length < 3){ cmds.push(b.dataset.d); render(); } else textEl.innerHTML = 'У рамці вже 3 команди — більше не влізе. Подумайте, що саме <i>повторюється</i>.'; return; }
+      if(b.classList.contains('pl')){ n = Math.min(9, n + 1); render(); return; }
+      if(b.classList.contains('mn')){ n = Math.max(1, n - 1); render(); return; }
+      if(b.classList.contains('del')){ cmds.pop(); render(); return; }
+      if(b.classList.contains('clr')){ cmds = []; n = 1; render(); place(MAZE.start); return; }
+      if(b.classList.contains('go')){
+        if(!cmds.length){ textEl.innerHTML = 'Спочатку покладіть команди в рамку.'; return; }
+        busy = true; place(MAZE.start); await new Promise(r => setTimeout(r, 300));
+        let [x, y] = MAZE.start, fail = null, steps = 0;
+        outer: for(let k = 0; k < n; k++){
+          for(let i = 0; i < cmds.length; i++){
+            body.querySelectorAll('.step').forEach((s, j) => s.classList.toggle('run', j === i));
+            const [dx, dy] = D5[cmds[i]]; x += dx; y += dy; steps++;
+            if(x < 0 || y < 0 || x > 4 || y > 4 || !isPath(x, y)){ fail = `Бум! На ${k + 1}-му повторі Байт врізався в стіну.`; place([x, y]); await new Promise(r => setTimeout(r, 450)); break outer; }
+            place([x, y]); await new Promise(r => setTimeout(r, 450));
+            if(x === MAZE.goal[0] && y === MAZE.goal[1]){
+              if(k === n - 1 && i === cmds.length - 1){ textEl.innerHTML = `Байт біля ядра! Програма: повтори ${n} рази <i>${cmds.map(d => D5[d][2]).join(' ')}</i>.`; p.onclick = null; setTimeout(res, 1800); return; }
+              fail = 'Байт уже біля ядра, але програма ще не закінчилась і повела його далі. Зменшіть кількість повторів!'; break outer;
+            }
+          }
+        }
+        if(!fail) fail = `Повтори скінчились, а до ядра ще не дійшли. ${n < 4 ? 'Може, повторити більше разів?' : 'Перевірте команди в рамці.'}`;
+        textEl.innerHTML = fail;
+        setTimeout(() => { place(MAZE.start); body.querySelectorAll('.step').forEach(s => s.classList.remove('run')); busy = false; }, 1000);
+      }
+    };
+  });
+  closePanel();
+}
+
+/* ---- 5.2 помилка в алгоритмі ---- */
+async function bugTask(){
+  const p = panel('Інформатика · бонус', 'Знайдіть помилку в алгоритмі', true);
+  const wrong = ['Взяти ядро', 'Підійти до панелі', 'Вставити ядро в слот', 'Відкрити кришку слота'];
+  p.insertAdjacentHTML('beforeend', '<div class="algo">' + wrong.map((t, i) => `<div><b>${i + 1}.</b>${t}</div>`).join('') + '</div>');
+  await say('byte', 'Я склав алгоритм, як вставити ядро, але щось пішло не так: <i>два кроки переплутано</i>! Які?', {noNext:true});
+  await choose(['Кроки 1 і 2', 'Кроки 2 і 3', 'Кроки 3 і 4'], 'Кроки 3 і 4', op => {
+    textEl.innerHTML = 'Уявіть, що ви робите це самі, крок за кроком. Чи можна вставити ядро, поки кришка закрита?';
+  });
+  const rows = p.querySelectorAll('.algo div');
+  rows[2].classList.add('bad'); rows[3].classList.add('bad');
+  await sleep(900);
+  rows[2].innerHTML = '<b>3.</b>Відкрити кришку слота'; rows[3].innerHTML = '<b>4.</b>Вставити ядро в слот';
+  rows.forEach(r => { r.classList.remove('bad'); r.classList.add('ok'); });
+  choicesEl.innerHTML = ''; textEl.innerHTML = 'Так! Спочатку <i>відкрити кришку</i>, а потім — вставити ядро. Порядок кроків в алгоритмі дуже важливий!'; talk('byte');
+  await sleep(3200);
+  closePanel();
+}
+
+/* ---- 5.3 факт, фейк чи судження ---- */
+const FF = {
+  'Факт':[
+    ['Олександрійська бібліотека була в Стародавньому Єгипті', 'Так, це правда — ми там були!'],
+    ['Ярослав Мудрий заснував бібліотеку в Києві', 'Правда — про це нам розповів Нестор.'],
+    ['Найбільший океан Землі — Тихий', 'Правда — це можна перевірити на карті.'],
+    ['Води Світового океану займають майже 3/4 поверхні Землі', 'Правда — про це написано в підручнику.']],
+  'Фейк':[
+    ['Північний Льодовитий океан — найтепліший', 'Неправда: він найхолодніший!'],
+    ['Магеллан обплив Землю на паровозі', 'Неправда: паровозів тоді ще не було, Магеллан плив на кораблях.'],
+    ['Перший літак полетів раніше, ніж з’явився паровоз', 'Неправда: паровоз — 1804 рік, літак — 1903.']],
+  'Судження':[
+    ['Паровоз — найкрасивіший винахід', 'Це чиясь думка: комусь до вподоби літак або супутник.'],
+    ['Римські цифри — найзручніші', 'Це думка, і багато хто з нею не погодиться.'],
+    ['Подорожувати в часі — найцікавіша пригода', 'Це думка — хоча ми з нею згодні!']]
+};
+async function factTask(){
+  const p = panel('Інформатика · достовірність', 'Факт, фейк чи судження?');
+  p.insertAdjacentHTML('beforeend', `<div class="ffcats"><div class="f"><b>Факт</b>правда, яку можна перевірити</div><div class="k"><b>Фейк</b>неправда, вигадка</div><div class="s"><b>Судження</b>чиясь думка, оцінка</div></div><div class="ffprog"></div><div class="ffbtns"></div>`);
+  const items = shuffle([].concat(...Object.entries(FF).map(([cat, arr]) => shuffle(arr).slice(0, 2).map(a => [cat, ...a]))));
+  const btns = p.querySelector('.ffbtns'), prog = p.querySelector('.ffprog');
+  await say('chron', 'Читайте повідомлення з Архіву і вирішуйте: це <i>факт</i>, <i>фейк</i> чи <i>судження</i>?', {noNext:true});
+  for(let i = 0; i < items.length; i++){
+    const [cat, text, why] = items[i];
+    p.querySelector('.ffcard')?.remove();
+    p.insertAdjacentHTML('beforeend', `<div class="ffcard">«${text}»</div>`);
+    prog.textContent = `Повідомлення ${i + 1} з ${items.length}`;
+    await cancellable(res => {
+      btns.innerHTML = '';
+      [['Факт', 'f'], ['Фейк', 'k'], ['Судження', 's']].forEach(([c, cl]) => {
+        const b = document.createElement('button'); b.className = 'ch ' + cl; b.textContent = c;
+        b.onclick = () => {
+          if(c === cat){ b.classList.add('right'); [...btns.children].forEach(x => x.disabled = true); textEl.innerHTML = `Так, це <i>${cat.toLowerCase()}</i>. ${why}`; talk('chron'); setTimeout(res, 2300); }
+          else { b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong'); textEl.innerHTML = cat === 'Судження' ? 'Подумайте: чи можна це перевірити? Чи кожен з цим погодиться?' : c === 'Судження' ? 'Тут немає нічиєї думки — це твердження можна перевірити. Воно правдиве чи ні?' : 'Згадайте, що ми дізналися в подорожі!'; }
+        };
+        btns.append(b);
+      });
+    });
+  }
+  closePanel();
+}
+
+/* ---- 5.4 ядро уяви ---- */
+const INV_Q = [
+  ['Кому допомагає винахід?', ['учням', 'котам і собакам', 'мандрівникам', 'бабусям і дідусям']],
+  ['Що він уміє?', ['перекладати будь-якою мовою', 'прибирати кімнату', 'вирощувати сад', 'переносити куди завгодно']],
+  ['Який він на вигляд?', ['як окуляри', 'як рюкзак', 'як парасолька', 'як велосипед']]
+];
+async function inventTask(){
+  const p = panel('Творче завдання', 'Ядро уяви: винахід для 3027 року');
+  let h = '<div class="inv">';
+  INV_Q.forEach(([q, opts], i) => h += `<div class="row" data-r="${i}"><div class="q">${i + 1}. ${q}</div><div class="opts">${opts.map(o => `<button class="ch" data-o="${o}">${o}</button>`).join('')}</div></div>`);
+  h += '</div>';
+  p.insertAdjacentHTML('beforeend', h);
+  const btn = document.createElement('button'); btn.className = 'pbtn'; btn.textContent = 'Створити винахід'; btn.style.top = '640px'; p.append(btn);
+  await say('chron', 'Вигадайте винахід для 3027 року! Обговоріть усім класом і оберіть по одній відповіді в кожному рядку.', {noNext:true});
+  const pick = {};
+  await cancellable(res => {
+    p.onclick = e => {
+      const b = e.target.closest('.opts .ch');
+      if(b){ const r = b.closest('.row').dataset.r; pick[r] = b.dataset.o; b.parentNode.querySelectorAll('.ch').forEach(x => x.classList.toggle('on', x === b)); return; }
+      if(e.target === btn){
+        if(Object.keys(pick).length < 3){ textEl.innerHTML = 'Оберіть відповідь у <i>кожному</i> рядку — і винахід готовий!'; return; }
+        p.onclick = null; res();
+      }
+    };
+  });
+  const look = pick[2].replace('як ', ''), names = {'окуляри':'Чарівні окуляри', 'рюкзак':'Розумний рюкзак', 'парасолька':'Чарівна парасолька', 'велосипед':'Диво-велосипед'};
+  st5.invention = names[look] || 'Наш винахід';
+  closePanel();
+  const box = $('#taskBox');
+  box.innerHTML = `<div class="dim"></div><div class="invcard"><div class="t">Винахід нашого класу</div><input id="invName" value="${st5.invention}" maxlength="40"><small>назву можна змінити</small><p>Допомагає <b>${pick[0]}</b>,<br>уміє <b>${pick[1]}</b>,<br>а виглядає <b>${pick[2]}</b>.</p></div>`;
+  box.classList.add('on');
+  const inp = $('#invName'); inp.oninput = () => st5.invention = inp.value.trim() || 'Наш винахід';
+  await say('chron', 'Чудова ідея! Можливо, хтось із вас колись справді створить такий винахід.');
+  closePanel();
+}
+
+/* ================== ФІНАЛ ================== */
+async function finale(){
+  setBg('hall'); clearFx(); hud(true); state.cores = [true, true, true, true, true]; buildHud();
+  show('murko', {img:'murko_happy', x:400, y:890, h:400, from:400});
+  show('byte', {x:1520, y:895, h:390, from:1520});
+  await sleep(800);
+  placeCores();
+  await say('byte', 'Усі п’ять ядер на місці! Слухайте… Архів більше не мерехтить!');
+  const msg = document.createElement('div'); msg.className = 'screenMsg'; msg.innerHTML = 'Вітаю, Мурко!<br>Місію виконано.<br>Але є ще одна таємниця…'; $('#fx').append(msg);
+  await say('screen', '«Вітаю, Мурко! Місію виконано. Але є ще одна таємниця…»');
+  msg.remove();
+  const o = show('oldm', {img:'murko_old', x:960, y:860, h:520, from:960, z:0}); o.classList.add('oldholo');
+  await sleep(2400);
+  await say('murko', 'Ти… ти схожий на мене! Той самий шарф… і той самий годинник!', {emo:'murko_surprised'});
+  await say('oldm', 'Бо я і є ти — тільки з дуже далекого майбутнього. Колись я створив цей годинник.');
+  await say('oldm', 'За правилами часу Хранитель не може змінювати власне минуле. Тому Хрон надіслав сигнал через годинник — щоб знайти <i>нову команду</i>.');
+  await say('oldm', 'Ви, мабуть, бачили, як я мерехтів? Поки Архів був зламаний, зв’язок працював погано. Тепер усе добре — завдяки вам!');
+  await say('chron', 'Справжні Хранителі часу — це ті, хто цікавиться світом, навчається, досліджує та передає знання наступним поколінням.');
+  await say('murko', 'Друзі, ви зробили це! Тепер ви теж <i>Хранителі часу</i>!', {emo:'murko_wave'});
+  await say('oldm', 'Ми ще зустрінемося!');
+  o.style.transition = 'opacity 1.6s'; o.classList.add('hidden');
+  await sleep(1200);
+  await say('byte', 'А тепер — нагорода для всього класу!', {noNext:true});
+  await bigButton('Отримати нагороду', 380);
+  hideDialog();
+  await fadeTo(() => { clearActors(); clearFx(); run(certificate); }, 'white');
+}
+
+/* ---- сертифікат ---- */
+const certState = {cls:'4'};
+async function drawCert(cv){
+  await document.fonts.load('700 80px Comfortaa'); await document.fonts.load('800 40px Nunito');
+  const ctx = cv.getContext('2d'), bg = new Image();
+  await new Promise(r => { bg.onload = r; bg.onerror = r; bg.src = BG.cert; });
+  const paint = () => {
+    ctx.clearRect(0, 0, 1920, 1080); ctx.drawImage(bg, 0, 0, 1920, 1080);
+    ctx.textAlign = 'center'; ctx.fillStyle = '#3b2412';
+    ctx.font = '700 40px Comfortaa'; ctx.fillStyle = '#7a5320'; ctx.fillText('СЕРТИФІКАТ', 960, 258);
+    ctx.font = '700 92px Comfortaa'; ctx.fillStyle = '#5a3a14'; ctx.fillText('Хранителі часу', 960, 360);
+    ctx.font = '600 38px Nunito'; ctx.fillStyle = '#3b2412';
+    ctx.fillText('вручається учням ' + (certState.cls || '___') + ' класу', 960, 440);
+    ctx.fillText('за повернення п’яти ядер Архіву часу', 960, 492);
+    ctx.font = '800 32px Nunito'; ctx.fillStyle = '#7b4fa8'; ctx.fillText('Винахід класу: «' + st5.invention + '»', 960, 566);
+    const d = new Date(), dd = String(d.getDate()).padStart(2, '0') + '.' + String(d.getMonth() + 1).padStart(2, '0') + '.' + d.getFullYear();
+    ctx.font = '600 28px Nunito'; ctx.fillStyle = '#5a3a14';
+    ctx.textAlign = 'left'; ctx.fillText(dd, 560, 640);
+    ctx.textAlign = 'right'; ctx.fillText('Хрон, Байт і Мурко', 1360, 640);
+  };
+  paint(); return paint;
+}
+async function certificate(){
+  setBg('cert'); clearFx(); hud(false);
+  const c = $('#cert'); c.innerHTML = '<canvas width="1920" height="1080"></canvas>'; c.classList.add('on');
+  const cv = c.querySelector('canvas'), paint = await drawCert(cv);
+  const bar = document.createElement('div'); bar.className = 'certbar';
+  bar.innerHTML = `Клас: <input id="certCls" value="${certState.cls}" maxlength="8"><button id="certSave">Зберегти картинку</button><button class="plain" id="certAgain">Пройти ще раз</button>`;
+  c.append(bar);
+  const ci = bar.querySelector('#certCls');
+  ci.oninput = () => { certState.cls = ci.value.trim(); paint(); };
+  bar.querySelector('#certSave').onclick = () => {
+    const showBox = url => {
+      const box = document.createElement('div'); box.className = 'savebox';
+      box.innerHTML = url ? `<img src="${url}" alt="Сертифікат"><p>Картинка завантажується в папку «Завантаження». Якщо цього не сталося — натисніть на сертифікат <b>правою кнопкою миші</b> і оберіть «Зберегти зображення як…».</p><button>Закрити</button>`
+                          : '<p>Збереження не вдалося в цьому браузері. Зробіть знімок екрана — на Windows: Win + Shift + S.</p><button>Закрити</button>';
+      box.querySelector('button').onclick = () => box.remove();
+      stage.append(box);
+    };
+    try {
+      cv.toBlob(blob => {
+        if(!blob){ showBox(null); return; }
+        const url = URL.createObjectURL(blob);
+        try { const a = document.createElement('a'); a.download = 'Хранителі часу ' + (certState.cls || '') + '.png'; a.href = url; document.body.append(a); a.click(); a.remove(); } catch(e){}
+        showBox(url);
+      }, 'image/png');
+    } catch(e){ showBox(null); }
+  };
+  bar.querySelector('#certAgain').onclick = () => { reset(); state.cores = [false, false, false, false, false]; $('#title').classList.remove('off'); setBg('city'); hud(false); };
+  hideDialog();
+}
+
+/* ================== запуск і меню ================== */
+let current = null;
+async function run(fn, arg){
+  cancelAll(); current = fn;
+  try { await fn(arg); }
+  catch(e){ if(e !== ABORT) console.error(e); }
+}
+function reset(){
+  cancelAll(); hideDialog(); clearActors(); clearFx(); $('#fade').classList.remove('on');
+  $('#reward').innerHTML = ''; document.querySelectorAll('.frag,.ghost,.savebox').forEach(e => e.remove());
+  $('#cert').classList.remove('on'); $('#cert').innerHTML = '';
+  ['#watchBox', '#mapBox', '#portal', '#taskBox'].forEach(s => { $(s).classList.remove('on'); $(s).innerHTML = ''; });
+  document.querySelectorAll('.bigbtn:not(#btnStart)').forEach(b => b.remove());
+}
+const SCENES = [
+  ['1. Горище і годинник', scene1, 0], ['2. Місто 3027', scene2, 0], ['3. Зала Архіву і карта часу', scene3, 0],
+  ['4. Епоха 1. Давній світ', era1, 0], ['Архів після 1-го ядра', hallReturn, 1],
+  ['5. Епоха 2. Середньовіччя', era2, 1], ['Архів після 2-го ядра', hallReturn, 2],
+  ['6. Епоха 3. Відродження і відкриття', era3, 2], ['Архів після 3-го ядра', hallReturn, 3],
+  ['7. Епоха 4. Доба винаходів', era4, 3], ['Архів після 4-го ядра', hallReturn, 4],
+  ['8. Епоха 5. Архів 3027', era5, 4], ['9. Фінал', finale, 5], ['10. Сертифікат', certificate, 5]
+];
+function buildMenu(){
+  const m = $('#menu'); m.innerHTML = '<h3>Перейти до сцени</h3>';
+  SCENES.forEach(([label, fn, cores]) => { const b = document.createElement('button'); b.textContent = label; b.onclick = () => { m.classList.remove('on'); $('#title').classList.add('off'); reset(); state.cores = state.cores.map((_, i) => i < cores); run(fn); }; m.append(b); });
+  m.insertAdjacentHTML('beforeend', '<small>Далі — пробіл, Enter або →. Повний екран — F.</small>');
+}
+buildMenu();
+$('#btnMenu').onclick = () => $('#menu').classList.toggle('on');
+function toggleFull(){ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen?.().catch(() => {}); }
+$('#btnFull').onclick = toggleFull;
+$('#btnStart').onclick = () => {
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+  $('#title').classList.add('off'); reset(); state.cores = [false,false,false,false,false]; run(scene1);
+};
+setBg('city');
+</script>
+</body>
+</html>
